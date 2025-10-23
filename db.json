@@ -1,0 +1,66 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "email": "admin@quiz.com",
+      "password": "admin123",
+      "role": "admin",
+      "name": "Admin User"
+    },
+    {
+      "id": 2,
+      "email": "student@quiz.com",
+      "password": "student123",
+      "role": "student",
+      "name": "Student User"
+    }
+  ],
+  "questions": [
+    {
+      "id": 1,
+      "question": "Что такое Vue.js?",
+      "options": ["Фреймворк", "Библиотека", "Язык программирования", "База данных"],
+      "correctAnswer": 0,
+      "category": "Vue.js",
+      "difficulty": "easy",
+      "points": 10
+    },
+    {
+      "id": 2,
+      "question": "Какой метод используется для создания реактивных данных в Composition API?",
+      "options": ["data()", "ref()", "computed()", "watch()"],
+      "correctAnswer": 1,
+      "category": "Vue.js",
+      "difficulty": "medium",
+      "points": 15
+    },
+    {
+      "id": 3,
+      "question": "Что такое Virtual DOM?",
+      "options": ["Реальная DOM структура", "Легковесная копия реальной DOM", "База данных", "Метод шифрования"],
+      "correctAnswer": 1,
+      "category": "Vue.js",
+      "difficulty": "medium",
+      "points": 15
+    },
+    {
+      "id": 4,
+      "question": "Какой директивой осуществляется условный рендеринг в Vue?",
+      "options": ["v-if", "v-for", "v-bind", "v-model"],
+      "correctAnswer": 0,
+      "category": "Vue.js",
+      "difficulty": "easy",
+      "points": 10
+    },
+    {
+      "id": 5,
+      "question": "Что возвращает функция computed?",
+      "options": ["Сырое значение", "Реактивную ссылку", "Функцию", "Объект"],
+      "correctAnswer": 1,
+      "category": "Vue.js",
+      "difficulty": "hard",
+      "points": 20
+    }
+  ],
+  "quizResults": []
+}
