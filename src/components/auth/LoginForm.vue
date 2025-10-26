@@ -56,7 +56,6 @@
       </div>
     </form>
 
-    <!-- Demo accounts info -->
     <div class="login-form__demo">
       <h4>Демо аккаунты:</h4>
       <div class="login-form__demo-accounts">
@@ -110,7 +109,6 @@ const isFormValid = computed(() => {
 })
 
 const handleSubmit = async () => {
-  // Validate all fields
   validateField('email')
   validateField('password')
 
@@ -119,11 +117,10 @@ const handleSubmit = async () => {
   try {
     await authStore.login(form.value.email, form.value.password)
   } catch (error) {
-    // Error handling is done in the store
+    // Error handled in store
   }
 }
 
-// Clear errors when form changes
 watch([() => form.value.email, () => form.value.password], () => {
   if (authStore.error) {
     authStore.clearError()

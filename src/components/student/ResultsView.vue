@@ -1,7 +1,6 @@
 <template>
   <div class="results-view">
     <div class="results-view__container">
-      <!-- Заголовок с результатом -->
       <div class="results-view__header">
         <h1 class="results-view__title">Результаты квиза</h1>
         <div 
@@ -13,7 +12,6 @@
         </div>
       </div>
 
-      <!-- Основная статистика -->
       <div class="results-view__stats">
         <div class="results-view__stat">
           <div class="results-view__stat-icon">✅</div>
@@ -48,7 +46,6 @@
         </div>
       </div>
 
-      <!-- Прогресс-бар -->
       <div class="results-view__progress">
         <div class="results-view__progress-info">
           <span>Прогресс выполнения</span>
@@ -63,7 +60,6 @@
         </div>
       </div>
 
-      <!-- Детали по вопросам -->
       <div class="results-view__details">
         <h2 class="results-view__details-title">Детали ответов</h2>
         <div class="results-view__questions">
@@ -108,7 +104,6 @@
         </div>
       </div>
 
-      <!-- Кнопки действий -->
       <div class="results-view__actions">
         <BaseButton
           variant="primary"
@@ -122,15 +117,6 @@
         <BaseButton
           variant="secondary"
           size="large"
-          @click="handleReviewAnswers"
-          class="results-view__action-btn"
-        >
-          📝 Обзор ответов
-        </BaseButton>
-
-        <BaseButton
-          variant="success"
-          size="large"
           @click="handleSaveResult"
           :loading="isSaving"
           class="results-view__action-btn"
@@ -139,7 +125,6 @@
         </BaseButton>
       </div>
 
-      <!-- Сообщение о сохранении -->
       <div v-if="saveMessage" class="results-view__save-message">
         {{ saveMessage }}
       </div>
@@ -216,12 +201,6 @@ const handleNewQuiz = () => {
   router.push('/student')
 }
 
-const handleReviewAnswers = () => {
-  // Можно реализовать постраничный просмотр ответов
-  questionsStore.currentQuestionIndex = 0
-  router.push('/quiz?review=true')
-}
-
 const handleSaveResult = async () => {
   isSaving.value = true
   saveMessage.value = ''
@@ -246,9 +225,7 @@ const handleSaveResult = async () => {
 }
 
 onMounted(() => {
-  // Рассчитываем затраченное время
-  const quizDuration = 300 // 5 минут в секундах
-  timeSpent.value = quizDuration - quizStore.timeRemaining
+  timeSpent.value = 300 - quizStore.timeRemaining
 })
 </script>
 

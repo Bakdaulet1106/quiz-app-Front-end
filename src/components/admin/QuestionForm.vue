@@ -14,7 +14,6 @@
           :class="{ 'question-form__textarea--error': errors.question }"
           placeholder="Введите текст вопроса"
           rows="3"
-          @blur="validateField('question')"
         ></textarea>
         <span v-if="errors.question" class="question-form__error">{{ errors.question }}</span>
       </div>
@@ -27,7 +26,6 @@
             v-model="form.category"
             class="question-form__select"
             :class="{ 'question-form__select--error': errors.category }"
-            @blur="validateField('category')"
           >
             <option value="">Выберите категорию</option>
             <option v-for="category in CATEGORIES" :key="category" :value="category">
@@ -44,7 +42,6 @@
             v-model="form.difficulty"
             class="question-form__select"
             :class="{ 'question-form__select--error': errors.difficulty }"
-            @blur="validateField('difficulty')"
           >
             <option value="">Выберите сложность</option>
             <option value="easy">Легкий</option>
@@ -65,7 +62,6 @@
             class="question-form__input"
             :class="{ 'question-form__input--error': errors.points }"
             placeholder="10"
-            @blur="validateField('points')"
           />
           <span v-if="errors.points" class="question-form__error">{{ errors.points }}</span>
         </div>
@@ -85,9 +81,7 @@
               v-model="form.options[index]"
               type="text"
               class="question-form__option-input"
-              :class="{ 'question-form__option-input--error': errors[`option${index}`] }"
               :placeholder="`Вариант ${String.fromCharCode(65 + index)}`"
-              @blur="validateOption(index)"
             />
             <BaseButton
               v-if="form.options.length > 2"
@@ -99,9 +93,6 @@
               ✕
             </BaseButton>
           </div>
-          <span v-if="errors[`option${index}`]" class="question-form__error">
-            {{ errors[`option${index}`] }}
-          </span>
         </div>
 
         <BaseButton
@@ -145,14 +136,12 @@
           type="button"
           variant="secondary"
           @click="$emit('cancel')"
-          :disabled="questionsStore.isLoading"
         >
           Отмена
         </BaseButton>
         <BaseButton
           type="submit"
           variant="primary"
-          :loading="questionsStore.isLoading"
           :disabled="!isFormValid"
         >
           {{ isEditing ? 'Обновить' : 'Создать' }}
@@ -163,9 +152,8 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useQuestionsStore } from '@/stores/questions'
-import { validateQuestion } from '@/utils/validators'
 import { CATEGORIES } from '@/utils/constants'
 import BaseButton from '@/components/common/BaseButton.vue'
 
@@ -203,31 +191,6 @@ const isFormValid = computed(() => {
          form.value.correctAnswer !== null
 })
 
-const validateField = (field) => {
-  switch (field) {
-    case 'question':
-      errors.value.question = form.value.question ? '' : 'Вопрос обязателен'
-      break
-    case 'category':
-      errors.value.category = form.value.category ? '' : 'Категория обязательна'
-      break
-    case 'difficulty':
-      errors.value.difficulty = form.value.difficulty ? '' : 'Сложность обязательна'
-      break
-    case 'points':
-      errors.value.points = form.value.points > 0 ? '' : 'Баллы должны быть больше 0'
-      break
-    case 'correctAnswer':
-      errors.value.correctAnswer = form.value.correctAnswer !== null ? '' : 'Выберите правильный ответ'
-      break
-  }
-}
-
-const validateOption = (index) => {
-  const key = `option${index}`
-  errors.value[key] = form.value.options[index].trim() ? '' : 'Вариант ответа не может быть пустым'
-}
-
 const addOption = () => {
   if (form.value.options.length < 6) {
     form.value.options.push('')
@@ -238,7 +201,6 @@ const removeOption = (index) => {
   if (form.value.options.length > 2) {
     form.value.options.splice(index, 1)
     
-    // Adjust correct answer if needed
     if (form.value.correctAnswer === index) {
       form.value.correctAnswer = null
     } else if (form.value.correctAnswer > index) {
@@ -247,55 +209,52 @@ const removeOption = (index) => {
   }
 }
 
-const handleSubmit = async () => {
-  // Validate all fields
-  validateField('question')
-  validateField('category')
-  validateField('difficulty')
-  validateField('points')
-  validateField('correctAnswer')
-  
-  form.value.options.forEach((_, index) => validateOption(index))
+const validateForm = () => {
+  errors.value = {}
 
-  // Check if there are any errors
-  const hasErrors = Object.values(errors.value).some(error => error)
-  if (hasErrors) return
-
-  try {
-    if (isEditing.value) {
-      await questionsStore.updateQuestion(props.question.id, form.value)
-    } else {
-      await questionsStore.addQuestion(form.value)
-    }
-    emit('submit')
-  } catch (error) {
-    // Error handling is done in the store
+  if (!form.value.question.trim()) {
+    errors.value.question = 'Вопрос обязателен'
   }
+  if (!form.value.category) {
+    errors.value.category = 'Категория обязательна'
+  }
+  if (!form.value.difficulty) {
+    errors.value.difficulty = 'Сложность обязательна'
+  }
+  if (!form.value.points || form.value.points < 1) {
+    errors.value.points = 'Баллы должны быть больше 0'
+  }
+  if (form.value.correctAnswer === null) {
+    errors.value.correctAnswer = 'Выберите правильный ответ'
+  }
+
+  return Object.keys(errors.value).length === 0
 }
 
-// Initialize form when question prop changes
+const handleSubmit = () => {
+  if (!validateForm()) return
+
+  if (isEditing.value) {
+    const index = questionsStore.questions.findIndex(q => q.id === props.question.id)
+    if (index !== -1) {
+      questionsStore.questions[index] = { ...props.question, ...form.value }
+    }
+  } else {
+    const newQuestion = {
+      id: Date.now(),
+      ...form.value
+    }
+    questionsStore.questions.push(newQuestion)
+  }
+
+  emit('submit')
+}
+
 watch(() => props.question, (newQuestion) => {
   if (newQuestion) {
     form.value = { ...newQuestion }
-  } else {
-    form.value = {
-      question: '',
-      category: '',
-      difficulty: '',
-      points: 10,
-      options: ['', ''],
-      correctAnswer: null
-    }
   }
-  errors.value = {}
 }, { immediate: true })
-
-// Clear errors when form changes
-watch(form, () => {
-  if (questionsStore.error) {
-    questionsStore.error = null
-  }
-}, { deep: true })
 </script>
 
 <style scoped>
@@ -419,10 +378,6 @@ watch(form, () => {
 .question-form__option-input:focus {
   outline: none;
   border-color: var(--primary-color);
-}
-
-.question-form__option-input--error {
-  border-color: var(--danger-color);
 }
 
 .question-form__add-option {

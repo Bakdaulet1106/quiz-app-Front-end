@@ -1,7 +1,6 @@
 <template>
   <div class="dashboard-view">
     <div class="container">
-      <!-- Приветствие -->
       <div class="dashboard-view__welcome">
         <h1 class="dashboard-view__title">
           Добро пожаловать, {{ authStore.userName }}! 👋
@@ -11,7 +10,6 @@
         </p>
       </div>
 
-      <!-- Быстрые действия -->
       <div class="dashboard-view__quick-actions">
         <h2 class="dashboard-view__section-title">Быстрые действия</h2>
         <div class="dashboard-view__actions-grid">
@@ -49,22 +47,9 @@
               Просмотрите историю пройденных тестов
             </p>
           </router-link>
-
-          <div 
-            v-if="authStore.isAdmin"
-            class="dashboard-view__action-card"
-            @click="showStats = true"
-          >
-            <div class="dashboard-view__action-icon">📈</div>
-            <h3 class="dashboard-view__action-title">Статистика</h3>
-            <p class="dashboard-view__action-description">
-              Аналитика по всем пройденным тестам
-            </p>
-          </div>
         </div>
       </div>
 
-      <!-- Последние результаты (для студентов) -->
       <div 
         v-if="authStore.isStudent && recentResults.length > 0"
         class="dashboard-view__recent-results"
@@ -87,39 +72,11 @@
             </div>
             <div class="dashboard-view__result-details">
               <span>{{ result.correctAnswers }}/{{ result.totalQuestions }} правильных</span>
-              <span>{{ formatTime(result.timeSpent) }}</span>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Статистика (для администраторов) -->
-      <div 
-        v-if="authStore.isAdmin && stats"
-        class="dashboard-view__admin-stats"
-      >
-        <h2 class="dashboard-view__section-title">Общая статистика</h2>
-        <div class="dashboard-view__stats-grid">
-          <div class="dashboard-view__stat-item">
-            <div class="dashboard-view__stat-value">{{ stats.totalQuizzes }}</div>
-            <div class="dashboard-view__stat-label">Всего тестов</div>
-          </div>
-          <div class="dashboard-view__stat-item">
-            <div class="dashboard-view__stat-value">{{ stats.totalUsers }}</div>
-            <div class="dashboard-view__stat-label">Пользователей</div>
-          </div>
-          <div class="dashboard-view__stat-item">
-            <div class="dashboard-view__stat-value">{{ stats.averageScore }}%</div>
-            <div class="dashboard-view__stat-label">Средний результат</div>
-          </div>
-          <div class="dashboard-view__stat-item">
-            <div class="dashboard-view__stat-value">{{ stats.totalQuestions }}</div>
-            <div class="dashboard-view__stat-label">Вопросов в базе</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Сообщение если нет результатов -->
       <div 
         v-if="authStore.isStudent && recentResults.length === 0"
         class="dashboard-view__no-results"
@@ -143,17 +100,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useResultsStore } from '@/stores/results'
-import { useQuestionsStore } from '@/stores/questions'
 import BaseButton from '@/components/common/BaseButton.vue'
 
 const authStore = useAuthStore()
 const resultsStore = useResultsStore()
-const questionsStore = useQuestionsStore()
-
-const showStats = ref(false)
 
 const welcomeMessage = computed(() => {
   const hour = new Date().getHours()
@@ -164,17 +117,6 @@ const welcomeMessage = computed(() => {
 
 const recentResults = computed(() => {
   return resultsStore.recentResults.slice(0, 3)
-})
-
-const stats = computed(() => {
-  if (resultsStore.results.length === 0) return null
-  
-  return {
-    totalQuizzes: resultsStore.results.length,
-    totalUsers: new Set(resultsStore.results.map(r => r.userId)).size,
-    averageScore: resultsStore.averageScore,
-    totalQuestions: questionsStore.questions.length
-  }
 })
 
 const getScoreClass = (score) => {
@@ -188,16 +130,8 @@ const formatDate = (timestamp) => {
   return new Date(timestamp).toLocaleDateString('ru-RU')
 }
 
-const formatTime = (seconds) => {
-  if (!seconds) return '--:--'
-  const mins = Math.floor(seconds / 60)
-  const secs = seconds % 60
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-}
-
 onMounted(async () => {
   await resultsStore.loadResults()
-  await questionsStore.loadQuestions()
 })
 </script>
 
@@ -340,45 +274,8 @@ onMounted(async () => {
 }
 
 .dashboard-view__result-details {
-  display: flex;
-  justify-content: space-between;
   color: var(--text-secondary);
   font-size: 0.875rem;
-}
-
-.dashboard-view__admin-stats {
-  margin-bottom: 3rem;
-}
-
-.dashboard-view__stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1.5rem;
-}
-
-.dashboard-view__stat-item {
-  background: var(--bg-secondary);
-  padding: 2rem;
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow);
-  text-align: center;
-  border-top: 4px solid var(--primary-color);
-}
-
-.dashboard-view__stat-value {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: var(--primary-color);
-  line-height: 1;
-  margin-bottom: 0.5rem;
-}
-
-.dashboard-view__stat-label {
-  color: var(--text-secondary);
-  font-weight: 600;
-  font-size: 0.875rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 .dashboard-view__no-results {
@@ -440,34 +337,6 @@ onMounted(async () => {
 
   .dashboard-view__results-grid {
     grid-template-columns: 1fr;
-  }
-
-  .dashboard-view__stats-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .dashboard-view__stat-item {
-    padding: 1.5rem;
-  }
-
-  .dashboard-view__stat-value {
-    font-size: 2rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .dashboard-view__stats-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .dashboard-view__result-header {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .dashboard-view__result-details {
-    flex-direction: column;
-    gap: 0.25rem;
   }
 }
 </style>

@@ -66,10 +66,8 @@ const handleClick = (event) => {
   border: none;
   border-radius: var(--border-radius);
   font-weight: 600;
-  text-decoration: none;
   cursor: pointer;
   transition: var(--transition);
-  position: relative;
   font-family: inherit;
 }
 
@@ -87,7 +85,6 @@ const handleClick = (event) => {
   width: 100%;
 }
 
-/* Variants */
 .base-button--primary {
   background-color: var(--primary-color);
   color: var(--text-light);
@@ -95,7 +92,6 @@ const handleClick = (event) => {
 
 .base-button--primary:hover:not(.base-button--disabled) {
   background-color: var(--primary-dark);
-  transform: translateY(-1px);
 }
 
 .base-button--secondary {
@@ -109,34 +105,6 @@ const handleClick = (event) => {
   color: var(--text-light);
 }
 
-.base-button--success {
-  background-color: var(--success-color);
-  color: var(--text-light);
-}
-
-.base-button--success:hover:not(.base-button--disabled) {
-  opacity: 0.9;
-}
-
-.base-button--danger {
-  background-color: var(--danger-color);
-  color: var(--text-light);
-}
-
-.base-button--danger:hover:not(.base-button--disabled) {
-  opacity: 0.9;
-}
-
-.base-button--warning {
-  background-color: var(--warning-color);
-  color: var(--text-light);
-}
-
-.base-button--warning:hover:not(.base-button--disabled) {
-  opacity: 0.9;
-}
-
-/* Sizes */
 .base-button--small {
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
@@ -152,7 +120,6 @@ const handleClick = (event) => {
   font-size: 1.125rem;
 }
 
-/* Loading state */
 .base-button--loading {
   cursor: wait;
 }

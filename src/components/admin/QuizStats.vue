@@ -2,13 +2,7 @@
   <div class="quiz-stats">
     <h2 class="quiz-stats__title">Статистика квизов</h2>
 
-    <div v-if="resultsStore.isLoading" class="quiz-stats__loading">
-      <LoadingSpinner size="large" />
-      <p>Загрузка статистики...</p>
-    </div>
-
-    <div v-else class="quiz-stats__content">
-      <!-- Основные метрики -->
+    <div class="quiz-stats__content">
       <div class="quiz-stats__metrics">
         <div class="quiz-stats__metric">
           <div class="quiz-stats__metric-icon">📊</div>
@@ -29,7 +23,7 @@
         <div class="quiz-stats__metric">
           <div class="quiz-stats__metric-icon">⭐</div>
           <div class="quiz-stats__metric-info">
-            <div class="quiz-stats__metric-value">{{ averageScore }}%</div>
+            <div class="quiz-stats__metric-value">{{ resultsStore.averageScore }}%</div>
             <div class="quiz-stats__metric-label">Средний результат</div>
           </div>
         </div>
@@ -37,69 +31,12 @@
         <div class="quiz-stats__metric">
           <div class="quiz-stats__metric-icon">🎯</div>
           <div class="quiz-stats__metric-info">
-            <div class="quiz-stats__metric-value">{{ bestScore }}%</div>
+            <div class="quiz-stats__metric-value">{{ resultsStore.bestScore }}%</div>
             <div class="quiz-stats__metric-label">Лучший результат</div>
           </div>
         </div>
       </div>
 
-      <!-- Статистика по категориям -->
-      <div class="quiz-stats__section">
-        <h3 class="quiz-stats__section-title">Статистика по категориям</h3>
-        <div class="quiz-stats__categories">
-          <div 
-            v-for="stat in categoryStats" 
-            :key="stat.category"
-            class="quiz-stats__category"
-          >
-            <div class="quiz-stats__category-header">
-              <span class="quiz-stats__category-name">{{ stat.category }}</span>
-              <span class="quiz-stats__category-percentage">{{ stat.percentage }}%</span>
-            </div>
-            <div class="quiz-stats__progress">
-              <div 
-                class="quiz-stats__progress-bar"
-                :style="{ width: `${stat.percentage}%` }"
-                :class="getProgressColor(stat.percentage)"
-              ></div>
-            </div>
-            <div class="quiz-stats__category-details">
-              <span>{{ stat.correct }}/{{ stat.total }} правильных</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Статистика по сложности -->
-      <div class="quiz-stats__section">
-        <h3 class="quiz-stats__section-title">Статистика по сложности</h3>
-        <div class="quiz-stats__difficulties">
-          <div 
-            v-for="stat in difficultyStats" 
-            :key="stat.difficulty"
-            class="quiz-stats__difficulty"
-          >
-            <div class="quiz-stats__difficulty-header">
-              <span class="quiz-stats__difficulty-name">
-                {{ getDifficultyLabel(stat.difficulty) }}
-              </span>
-              <span class="quiz-stats__difficulty-percentage">{{ stat.percentage }}%</span>
-            </div>
-            <div class="quiz-stats__progress">
-              <div 
-                class="quiz-stats__progress-bar"
-                :style="{ width: `${stat.percentage}%` }"
-                :class="getProgressColor(stat.percentage)"
-              ></div>
-            </div>
-            <div class="quiz-stats__difficulty-details">
-              <span>{{ stat.correct }}/{{ stat.total }} правильных</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Последние результаты -->
       <div class="quiz-stats__section">
         <h3 class="quiz-stats__section-title">Последние результаты</h3>
         <div class="quiz-stats__recent-results">
@@ -133,10 +70,8 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed } from 'vue'
 import { useResultsStore } from '@/stores/results'
-import { getDifficultyLabel } from '@/utils/helpers'
-import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 
 const resultsStore = useResultsStore()
 
@@ -145,37 +80,11 @@ const uniqueUsers = computed(() => {
   return userIds.size
 })
 
-const averageScore = computed(() => {
-  if (resultsStore.results.length === 0) return 0
-  const total = resultsStore.results.reduce((sum, result) => sum + result.score, 0)
-  return Math.round(total / resultsStore.results.length)
-})
-
-const bestScore = computed(() => {
-  if (resultsStore.results.length === 0) return 0
-  return Math.max(...resultsStore.results.map(result => result.score))
-})
-
-const categoryStats = computed(() => {
-  return resultsStore.getCategoryStats()
-})
-
-const difficultyStats = computed(() => {
-  return resultsStore.getDifficultyStats()
-})
-
-const recentResults = computed(() => {
-  return resultsStore.results
+const recentResults = computed(() => 
+  resultsStore.results
     .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt))
     .slice(0, 10)
-})
-
-const getProgressColor = (percentage) => {
-  if (percentage >= 80) return 'quiz-stats__progress-bar--excellent'
-  if (percentage >= 60) return 'quiz-stats__progress-bar--good'
-  if (percentage >= 40) return 'quiz-stats__progress-bar--average'
-  return 'quiz-stats__progress-bar--poor'
-}
+)
 
 const getScoreClass = (score) => {
   if (score >= 80) return 'quiz-stats__score-badge--excellent'
@@ -188,15 +97,9 @@ const formatTime = (timestamp) => {
   return new Date(timestamp).toLocaleDateString('ru-RU', {
     day: '2-digit',
     month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
+    year: 'numeric'
   })
 }
-
-onMounted(async () => {
-  await resultsStore.loadResults()
-})
 </script>
 
 <style scoped>
@@ -208,15 +111,6 @@ onMounted(async () => {
   margin-bottom: 2rem;
   color: var(--text-primary);
   text-align: center;
-}
-
-.quiz-stats__loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  padding: 3rem;
-  color: var(--text-secondary);
 }
 
 .quiz-stats__metrics {
@@ -268,79 +162,6 @@ onMounted(async () => {
   font-size: 1.25rem;
   border-bottom: 2px solid var(--primary-color);
   padding-bottom: 0.5rem;
-}
-
-.quiz-stats__categories,
-.quiz-stats__difficulties {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.quiz-stats__category,
-.quiz-stats__difficulty {
-  background: var(--bg-secondary);
-  padding: 1.5rem;
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow);
-}
-
-.quiz-stats__category-header,
-.quiz-stats__difficulty-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.75rem;
-}
-
-.quiz-stats__category-name,
-.quiz-stats__difficulty-name {
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.quiz-stats__category-percentage,
-.quiz-stats__difficulty-percentage {
-  font-weight: 700;
-  color: var(--primary-color);
-  font-size: 1.125rem;
-}
-
-.quiz-stats__progress {
-  width: 100%;
-  height: 8px;
-  background-color: var(--bg-primary);
-  border-radius: 4px;
-  overflow: hidden;
-  margin-bottom: 0.5rem;
-}
-
-.quiz-stats__progress-bar {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.3s ease;
-}
-
-.quiz-stats__progress-bar--excellent {
-  background-color: #10b981;
-}
-
-.quiz-stats__progress-bar--good {
-  background-color: #3b82f6;
-}
-
-.quiz-stats__progress-bar--average {
-  background-color: #f59e0b;
-}
-
-.quiz-stats__progress-bar--poor {
-  background-color: #ef4444;
-}
-
-.quiz-stats__category-details,
-.quiz-stats__difficulty-details {
-  font-size: 0.875rem;
-  color: var(--text-secondary);
 }
 
 .quiz-stats__recent-results {

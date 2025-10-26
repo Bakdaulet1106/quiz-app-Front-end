@@ -4,7 +4,7 @@ import { useAuthStore } from '@/stores/auth'
 const routes = [
   {
     path: '/',
-    redirect: '/dashboard'
+    redirect: '/login'
   },
   {
     path: '/login',
@@ -45,38 +45,29 @@ const routes = [
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory('/quiz-app-Front-end/'),
   routes
 })
 
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
-  
-  // Initialize auth state
-  if (!authStore.user) {
-    authStore.initializeAuth()
-  }
+  authStore.initializeAuth()
 
   const isAuthenticated = authStore.isAuthenticated
   const isAdmin = authStore.isAdmin
 
-  // Check if route requires authentication
   if (to.meta.requiresAuth && !isAuthenticated) {
     return next('/login')
   }
 
-  // Check if route is for guests only
   if (to.meta.guestOnly && isAuthenticated) {
-    const redirectTo = isAdmin ? '/admin' : '/student'
-    return next(redirectTo)
+    return next(isAdmin ? '/admin' : '/student')
   }
 
-  // Check admin routes
   if (to.meta.requiresAdmin && !isAdmin) {
     return next('/student')
   }
 
-  // Check student routes
   if (to.meta.requiresStudent && isAdmin) {
     return next('/admin')
   }

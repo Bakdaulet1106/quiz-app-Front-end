@@ -29,37 +29,23 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.code === 'NETWORK_ERROR' || error.code === 'ECONNREFUSED') {
-      console.warn('API недоступен, используется оффлайн режим')
+      console.warn('API недоступен, используется локальный режим')
+      // Возвращаем mock данные для оффлайн режима
+      return Promise.resolve({ data: [] })
     }
     return Promise.reject(error)
   }
 )
 
-// Offline fallback
-const offlineStorage = {
-  get: (key) => {
-    const data = localStorage.getItem(`offline_${key}`)
-    return data ? JSON.parse(data) : null
-  },
-  set: (key, data) => {
-    localStorage.setItem(`offline_${key}`, JSON.stringify(data))
-  }
-}
-
 export const apiService = {
   async get(url) {
     try {
       const response = await api.get(url)
-      // Сохраняем данные для оффлайн использования
-      offlineStorage.set(url, response.data)
       return response
     } catch (error) {
-      // Пробуем получить данные из оффлайн хранилища
-      const offlineData = offlineStorage.get(url)
-      if (offlineData) {
-        return { data: offlineData }
-      }
-      throw error
+      console.error('API Error:', error)
+      // Возвращаем пустой массив для оффлайн режима
+      return { data: [] }
     }
   },
 
@@ -68,11 +54,9 @@ export const apiService = {
       const response = await api.post(url, data)
       return response
     } catch (error) {
-      // Сохраняем для синхронизации когда онлайн
-      const pendingRequests = offlineStorage.get('pending_requests') || []
-      pendingRequests.push({ url, data, method: 'POST', timestamp: Date.now() })
-      offlineStorage.set('pending_requests', pendingRequests)
-      return { data: { id: Date.now(), ...data } } // Mock response for offline
+      console.error('API Error:', error)
+      // Возвращаем mock ответ для оффлайн режима
+      return { data: { id: Date.now(), ...data } }
     }
   },
 
@@ -81,9 +65,7 @@ export const apiService = {
       const response = await api.put(url, data)
       return response
     } catch (error) {
-      const pendingRequests = offlineStorage.get('pending_requests') || []
-      pendingRequests.push({ url, data, method: 'PUT', timestamp: Date.now() })
-      offlineStorage.set('pending_requests', pendingRequests)
+      console.error('API Error:', error)
       return { data }
     }
   },
@@ -93,9 +75,7 @@ export const apiService = {
       const response = await api.delete(url)
       return response
     } catch (error) {
-      const pendingRequests = offlineStorage.get('pending_requests') || []
-      pendingRequests.push({ url, method: 'DELETE', timestamp: Date.now() })
-      offlineStorage.set('pending_requests', pendingRequests)
+      console.error('API Error:', error)
       return { data: {} }
     }
   }

@@ -1,40 +1,8 @@
 <template>
   <div class="quiz-view">
     <div class="container">
-      <!-- Режим просмотра результатов -->
-      <div v-if="isReviewMode" class="quiz-view__review-mode">
-        <div class="quiz-view__review-header">
-          <h1 class="quiz-view__review-title">Обзор ответов</h1>
-          <BaseButton variant="primary" @click="finishReview">
-            ← Вернуться к результатам
-          </BaseButton>
-        </div>
-        
-        <QuestionCard :show-results="true" />
-        
-        <div class="quiz-view__review-navigation">
-          <BaseButton
-            variant="secondary"
-            @click="previousQuestion"
-            :disabled="questionsStore.currentQuestionIndex === 0"
-          >
-            ← Предыдущий вопрос
-          </BaseButton>
-          <span class="quiz-view__review-counter">
-            Вопрос {{ questionsStore.currentQuestionIndex + 1 }} из {{ questionsStore.totalQuestions }}
-          </span>
-          <BaseButton
-            variant="secondary"
-            @click="nextQuestion"
-            :disabled="questionsStore.currentQuestionIndex === questionsStore.totalQuestions - 1"
-          >
-            Следующий вопрос →
-          </BaseButton>
-        </div>
-      </div>
-
       <!-- Активный квиз -->
-      <div v-else-if="questionsStore.quizStarted && !questionsStore.quizCompleted" class="quiz-view__active">
+      <div v-if="questionsStore.quizStarted && !questionsStore.quizCompleted" class="quiz-view__active">
         <div class="quiz-view__header">
           <div class="quiz-view__quiz-info">
             <h1 class="quiz-view__title">Прохождение квиза</h1>
@@ -118,8 +86,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { onMounted, onUnmounted } from 'vue'
 import { useQuestionsStore } from '@/stores/questions'
 import { useQuizStore } from '@/stores/quiz'
 import QuestionCard from '@/components/student/QuestionCard.vue'
@@ -127,15 +94,12 @@ import QuizTimer from '@/components/student/QuizTimer.vue'
 import ResultsView from '@/components/student/ResultsView.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 
-const route = useRoute()
-const router = useRouter()
 const questionsStore = useQuestionsStore()
 const quizStore = useQuizStore()
 
-const isReviewMode = ref(false)
-
 const startQuiz = () => {
   questionsStore.startQuiz()
+  quizStore.startTimer(300)
 }
 
 const completeQuiz = () => {
@@ -143,53 +107,16 @@ const completeQuiz = () => {
   quizStore.stopTimer()
 }
 
-const previousQuestion = () => {
-  if (questionsStore.currentQuestionIndex > 0) {
-    questionsStore.currentQuestionIndex--
-  }
-}
-
-const nextQuestion = () => {
-  if (questionsStore.currentQuestionIndex < questionsStore.totalQuestions - 1) {
-    questionsStore.currentQuestionIndex++
-  }
-}
-
-const finishReview = () => {
-  router.push('/results')
-}
-
-// Обработка автоматического завершения при истечении времени
-const handleTimeUp = () => {
-  if (questionsStore.quizStarted && !questionsStore.quizCompleted) {
-    completeQuiz()
-  }
-}
-
-// Проверяем параметр review в URL
 onMounted(() => {
-  isReviewMode.value = route.query.review === 'true'
-  
   // Если вопросы не загружены, возвращаемся на страницу студента
-  if (isReviewMode.value && questionsStore.questions.length === 0) {
-    router.push('/student')
+  if (questionsStore.questions.length === 0) {
+    // В реальном приложении здесь был бы redirect
+    console.log('No questions loaded')
   }
 })
 
-// Следим за изменением времени
-onMounted(() => {
-  // Подписываемся на событие истечения времени
-  const unwatch = quizStore.$onAction(({ name, after }) => {
-    if (name === 'startTimer') {
-      after(() => {
-        // Таймер будет автоматически завершать квиз через store
-      })
-    }
-  })
-
-  onUnmounted(() => {
-    unwatch()
-  })
+onUnmounted(() => {
+  quizStore.stopTimer()
 })
 </script>
 
@@ -199,44 +126,6 @@ onMounted(() => {
   min-height: calc(100vh - 200px);
 }
 
-/* Режим просмотра */
-.quiz-view__review-mode {
-  max-width: 1000px;
-  margin: 0 auto;
-}
-
-.quiz-view__review-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-  padding: 1rem 0;
-  border-bottom: 2px solid var(--bg-primary);
-}
-
-.quiz-view__review-title {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: 2rem;
-}
-
-.quiz-view__review-navigation {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 2rem;
-  padding: 1.5rem;
-  background: var(--bg-secondary);
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow);
-}
-
-.quiz-view__review-counter {
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-/* Активный квиз */
 .quiz-view__header {
   display: flex;
   justify-content: space-between;
@@ -320,7 +209,6 @@ onMounted(() => {
   font-size: 1.125rem;
 }
 
-/* Начало квиза */
 .quiz-view__start {
   display: flex;
   align-items: center;
@@ -407,22 +295,6 @@ onMounted(() => {
 @media (max-width: 768px) {
   .quiz-view {
     padding: 0.5rem 0;
-  }
-
-  .quiz-view__review-header {
-    flex-direction: column;
-    gap: 1rem;
-    align-items: stretch;
-    text-align: center;
-  }
-
-  .quiz-view__review-title {
-    font-size: 1.5rem;
-  }
-
-  .quiz-view__review-navigation {
-    flex-direction: column;
-    gap: 1rem;
   }
 
   .quiz-view__header {

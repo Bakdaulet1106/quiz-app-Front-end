@@ -37,16 +37,7 @@
       </div>
     </div>
 
-    <div v-if="questionsStore.isLoading" class="quiz-list__loading">
-      <LoadingSpinner size="large" />
-      <p>Загрузка квизов...</p>
-    </div>
-
-    <div v-else-if="availableQuizzes.length === 0" class="quiz-list__empty">
-      <p>Нет доступных квизов</p>
-    </div>
-
-    <div v-else class="quiz-list__content">
+    <div class="quiz-list__content">
       <div class="quiz-list__stats">
         Найдено квизов: {{ availableQuizzes.length }}
       </div>
@@ -64,13 +55,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuestionsStore } from '@/stores/questions'
 import { getRandomQuestions } from '@/utils/helpers'
 import { QUIZ_SETTINGS } from '@/utils/constants'
 import QuizCard from './QuizCard.vue'
-import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 
 const router = useRouter()
 const questionsStore = useQuestionsStore()
@@ -96,7 +86,6 @@ const availableQuizzes = computed(() => {
     filtered = filtered.filter(q => q.difficulty === filters.value.difficulty)
   }
 
-  // Группируем по категориям и сложности для создания квизов
   const quizMap = new Map()
 
   filtered.forEach(question => {
@@ -129,23 +118,17 @@ const getDifficultyLabel = (difficulty) => {
 }
 
 const handleStartQuiz = (quiz) => {
-  // Получаем случайные вопросы для этого квиза
   const categoryQuestions = questionsStore.questions.filter(
     q => q.category === quiz.category && q.difficulty === quiz.difficulty
   )
   
   const randomQuestions = getRandomQuestions(categoryQuestions, quiz.questionCount)
   
-  // Сохраняем вопросы для квиза и переходим на страницу квиза
   questionsStore.questions = randomQuestions
   questionsStore.startQuiz(quiz.questionCount)
   
   router.push('/quiz')
 }
-
-onMounted(async () => {
-  await questionsStore.loadQuestions()
-})
 </script>
 
 <style scoped>
@@ -195,22 +178,6 @@ onMounted(async () => {
 .quiz-list__filter-select:focus {
   outline: none;
   border-color: var(--primary-color);
-}
-
-.quiz-list__loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  padding: 3rem;
-  color: var(--text-secondary);
-}
-
-.quiz-list__empty {
-  text-align: center;
-  padding: 3rem;
-  color: var(--text-secondary);
-  font-size: 1.125rem;
 }
 
 .quiz-list__stats {

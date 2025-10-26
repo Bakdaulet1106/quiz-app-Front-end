@@ -29,27 +29,6 @@
       </div>
     </div>
 
-    <div class="quiz-timer__controls" v-if="showControls">
-      <BaseButton 
-        v-if="isTimerRunning"
-        variant="warning" 
-        size="small"
-        @click="pauseTimer"
-        class="quiz-timer__control-btn"
-      >
-        ⏸️ Пауза
-      </BaseButton>
-      <BaseButton 
-        v-else
-        variant="success" 
-        size="small"
-        @click="resumeTimer"
-        class="quiz-timer__control-btn"
-      >
-        ▶️ Продолжить
-      </BaseButton>
-    </div>
-
     <div 
       v-if="timeRemaining <= 60 && timeRemaining > 0"
       class="quiz-timer__warning"
@@ -67,20 +46,8 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted } from 'vue'
+import { computed } from 'vue'
 import { useQuizStore } from '@/stores/quiz'
-import BaseButton from '@/components/common/BaseButton.vue'
-
-const props = defineProps({
-  duration: {
-    type: Number,
-    default: 300 // 5 minutes in seconds
-  },
-  showControls: {
-    type: Boolean,
-    default: true
-  }
-})
 
 const quizStore = useQuizStore()
 
@@ -95,24 +62,8 @@ const formattedTime = computed(() => {
 
 const circumference = 2 * Math.PI * 45
 const progressOffset = computed(() => {
-  const progress = (props.duration - timeRemaining.value) / props.duration
+  const progress = (300 - timeRemaining.value) / 300
   return circumference * (1 - progress)
-})
-
-const pauseTimer = () => {
-  quizStore.pauseTimer()
-}
-
-const resumeTimer = () => {
-  quizStore.resumeTimer()
-}
-
-onMounted(() => {
-  quizStore.startTimer(props.duration)
-})
-
-onUnmounted(() => {
-  quizStore.stopTimer()
 })
 </script>
 
@@ -186,16 +137,6 @@ onUnmounted(() => {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-}
-
-.quiz-timer__controls {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.quiz-timer__control-btn {
-  font-size: 0.75rem;
-  padding: 0.5rem 1rem;
 }
 
 .quiz-timer__warning {

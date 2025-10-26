@@ -11,16 +11,7 @@
       </BaseButton>
     </div>
 
-    <div v-if="questionsStore.isLoading" class="question-list__loading">
-      <LoadingSpinner size="large" />
-      <p>Загрузка вопросов...</p>
-    </div>
-
-    <div v-else-if="filteredQuestions.length === 0" class="question-list__empty">
-      <p>Вопросы не найдены</p>
-    </div>
-
-    <div v-else class="question-list__content">
+    <div class="question-list__content">
       <div class="question-list__filters">
         <div class="question-list__filter">
           <label for="category" class="question-list__filter-label">Категория:</label>
@@ -112,7 +103,6 @@
               variant="danger" 
               size="small"
               @click="handleDeleteQuestion(question.id)"
-              :loading="deletingQuestionId === question.id"
             >
               🗑️ Удалить
             </BaseButton>
@@ -124,17 +114,15 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useQuestionsStore } from '@/stores/questions'
 import { getDifficultyColor, getDifficultyLabel } from '@/utils/helpers'
 import { CATEGORIES } from '@/utils/constants'
 import BaseButton from '@/components/common/BaseButton.vue'
-import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 
 const emit = defineEmits(['add-question', 'edit-question'])
 
 const questionsStore = useQuestionsStore()
-const deletingQuestionId = ref(null)
 
 const filters = ref({
   category: '',
@@ -160,22 +148,11 @@ const filteredQuestions = computed(() => {
   return filtered
 })
 
-const handleDeleteQuestion = async (questionId) => {
-  if (!confirm('Вы уверены, что хотите удалить этот вопрос?')) return
-
-  deletingQuestionId.value = questionId
-  try {
-    await questionsStore.deleteQuestion(questionId)
-  } catch (error) {
-    alert('Ошибка при удалении вопроса')
-  } finally {
-    deletingQuestionId.value = null
+const handleDeleteQuestion = (questionId) => {
+  if (confirm('Вы уверены, что хотите удалить этот вопрос?')) {
+    questionsStore.questions = questionsStore.questions.filter(q => q.id !== questionId)
   }
 }
-
-onMounted(async () => {
-  await questionsStore.loadQuestions()
-})
 </script>
 
 <style scoped>
@@ -195,22 +172,6 @@ onMounted(async () => {
 .question-list__title {
   color: var(--text-primary);
   margin: 0;
-}
-
-.question-list__loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  padding: 3rem;
-  color: var(--text-secondary);
-}
-
-.question-list__empty {
-  text-align: center;
-  padding: 3rem;
-  color: var(--text-secondary);
-  font-size: 1.125rem;
 }
 
 .question-list__filters {

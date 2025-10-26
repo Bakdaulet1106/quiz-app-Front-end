@@ -8,12 +8,7 @@
         </BaseButton>
       </div>
 
-      <div v-if="resultsStore.isLoading" class="results-view-page__loading">
-        <LoadingSpinner size="large" />
-        <p>Загрузка результатов...</p>
-      </div>
-
-      <div v-else-if="resultsStore.userResults.length === 0" class="results-view-page__empty">
+      <div v-if="resultsStore.userResults.length === 0" class="results-view-page__empty">
         <div class="results-view-page__empty-content">
           <div class="results-view-page__empty-icon">📊</div>
           <h2 class="results-view-page__empty-title">Пока нет результатов</h2>
@@ -27,7 +22,6 @@
       </div>
 
       <div v-else class="results-view-page__content">
-        <!-- Общая статистика -->
         <div class="results-view-page__overview">
           <h2 class="results-view-page__section-title">Общая статистика</h2>
           <div class="results-view-page__stats">
@@ -57,7 +51,6 @@
           </div>
         </div>
 
-        <!-- История результатов -->
         <div class="results-view-page__history">
           <h2 class="results-view-page__section-title">История результатов</h2>
           <div class="results-view-page__results-list">
@@ -89,65 +82,6 @@
                     ⏱️ {{ formatTime(result.timeSpent) }}
                   </span>
                 </div>
-
-                <div class="results-view-page__result-actions">
-                  <BaseButton
-                    variant="secondary"
-                    size="small"
-                    @click="viewResultDetails(result)"
-                  >
-                    📝 Детали
-                  </BaseButton>
-                </div>
-              </div>
-
-              <!-- Детали результата -->
-              <div 
-                v-if="expandedResult === result.id"
-                class="results-view-page__result-expanded"
-              >
-                <div class="results-view-page__questions-list">
-                  <div
-                    v-for="(answer, index) in result.answers"
-                    :key="index"
-                    class="results-view-page__question-item"
-                  >
-                    <div class="results-view-page__question-header">
-                      <span class="results-view-page__question-number">
-                        Вопрос {{ index + 1 }}
-                      </span>
-                      <span 
-                        class="results-view-page__question-status"
-                        :class="answer.isCorrect ? 'results-view-page__question-status--correct' : 'results-view-page__question-status--incorrect'"
-                      >
-                        {{ answer.isCorrect ? '✅ Правильно' : '❌ Неправильно' }}
-                      </span>
-                    </div>
-                    
-                    <div class="results-view-page__question-text">
-                      {{ getQuestionText(result, index) }}
-                    </div>
-
-                    <div class="results-view-page__question-answers">
-                      <div class="results-view-page__answer">
-                        <span class="results-view-page__answer-label">Ваш ответ:</span>
-                        <span class="results-view-page__answer-value">
-                          {{ getAnswerText(result, index, answer.answerIndex) }}
-                        </span>
-                      </div>
-                      
-                      <div 
-                        v-if="!answer.isCorrect"
-                        class="results-view-page__answer"
-                      >
-                        <span class="results-view-page__answer-label">Правильный ответ:</span>
-                        <span class="results-view-page__answer-value results-view-page__answer-value--correct">
-                          {{ getAnswerText(result, index, getCorrectAnswerIndex(result, index)) }}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -158,16 +92,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useResultsStore } from '@/stores/results'
 import BaseButton from '@/components/common/BaseButton.vue'
-import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 
 const router = useRouter()
 const resultsStore = useResultsStore()
-
-const expandedResult = ref(null)
 
 const sortedResults = computed(() => {
   return [...resultsStore.userResults].sort((a, b) => 
@@ -199,26 +130,6 @@ const formatTime = (seconds) => {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
 }
 
-const viewResultDetails = (result) => {
-  expandedResult.value = expandedResult.value === result.id ? null : result.id
-}
-
-const getQuestionText = (result, index) => {
-  return result.questions?.[index]?.question || 'Вопрос не найден'
-}
-
-const getAnswerText = (result, questionIndex, answerIndex) => {
-  const question = result.questions?.[questionIndex]
-  if (!question || answerIndex === null || answerIndex === undefined) {
-    return 'Ответ не выбран'
-  }
-  return question.options[answerIndex] || 'Вариант не найден'
-}
-
-const getCorrectAnswerIndex = (result, index) => {
-  return result.questions?.[index]?.correctAnswer
-}
-
 onMounted(async () => {
   await resultsStore.loadResults()
 })
@@ -244,15 +155,6 @@ onMounted(async () => {
   color: var(--text-primary);
   font-size: 2.5rem;
   font-weight: 700;
-}
-
-.results-view-page__loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  padding: 4rem;
-  color: var(--text-secondary);
 }
 
 .results-view-page__empty {
@@ -370,12 +272,6 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem;
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.results-view-page__result-main:hover {
-  background-color: rgba(67, 97, 238, 0.05);
 }
 
 .results-view-page__result-date {
@@ -432,92 +328,6 @@ onMounted(async () => {
   font-weight: 500;
 }
 
-.results-view-page__result-expanded {
-  border-top: 1px solid #e2e8f0;
-  background-color: var(--bg-secondary);
-}
-
-.results-view-page__questions-list {
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.results-view-page__question-item {
-  background: var(--bg-primary);
-  padding: 1.5rem;
-  border-radius: var(--border-radius);
-  border-left: 4px solid var(--primary-color);
-}
-
-.results-view-page__question-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.results-view-page__question-number {
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.results-view-page__question-status {
-  font-weight: 600;
-  font-size: 0.875rem;
-  padding: 0.25rem 0.75rem;
-  border-radius: 1rem;
-}
-
-.results-view-page__question-status--correct {
-  background-color: rgba(16, 185, 129, 0.1);
-  color: #10b981;
-}
-
-.results-view-page__question-status--incorrect {
-  background-color: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-}
-
-.results-view-page__question-text {
-  color: var(--text-primary);
-  line-height: 1.6;
-  margin-bottom: 1rem;
-  font-style: italic;
-}
-
-.results-view-page__question-answers {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.results-view-page__answer {
-  display: flex;
-  gap: 0.5rem;
-  align-items: flex-start;
-}
-
-.results-view-page__answer-label {
-  font-weight: 600;
-  color: var(--text-secondary);
-  min-width: 140px;
-  font-size: 0.875rem;
-}
-
-.results-view-page__answer-value {
-  flex: 1;
-  color: var(--text-primary);
-}
-
-.results-view-page__answer-value--correct {
-  color: #10b981;
-  font-weight: 600;
-}
-
 @media (max-width: 768px) {
   .results-view-page {
     padding: 1rem 0;
@@ -569,29 +379,6 @@ onMounted(async () => {
     flex-direction: column;
     gap: 0.5rem;
     align-items: center;
-  }
-
-  .results-view-page__questions-list {
-    padding: 1rem;
-  }
-
-  .results-view-page__question-item {
-    padding: 1.25rem;
-  }
-
-  .results-view-page__question-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.75rem;
-  }
-
-  .results-view-page__answer {
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  .results-view-page__answer-label {
-    min-width: auto;
   }
 }
 </style>

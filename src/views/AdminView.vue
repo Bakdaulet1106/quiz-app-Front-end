@@ -24,7 +24,6 @@
       </div>
 
       <div class="admin-view__content">
-        <!-- Управление вопросами -->
         <div v-if="activeTab === 'questions'" class="admin-view__tab-content">
           <QuestionList
             @add-question="showQuestionForm(null)"
@@ -32,7 +31,6 @@
           />
         </div>
 
-        <!-- Форма добавления/редактирования вопроса -->
         <div v-if="activeTab === 'question-form'" class="admin-view__tab-content">
           <QuestionForm
             :question="selectedQuestion"
@@ -41,7 +39,6 @@
           />
         </div>
 
-        <!-- Статистика -->
         <div v-if="activeTab === 'stats'" class="admin-view__tab-content">
           <QuizStats />
         </div>

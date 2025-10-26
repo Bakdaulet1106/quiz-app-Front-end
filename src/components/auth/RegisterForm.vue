@@ -145,7 +145,6 @@ const isFormValid = computed(() => {
 })
 
 const handleSubmit = async () => {
-  // Validate all fields
   validateField('name')
   validateField('email')
   validateField('password')
@@ -160,11 +159,10 @@ const handleSubmit = async () => {
       password: form.value.password
     })
   } catch (error) {
-    // Error handling is done in the store
+    // Error handled in store
   }
 }
 
-// Clear errors when form changes
 watch([() => form.value.name, () => form.value.email, () => form.value.password, () => form.value.confirmPassword], () => {
   if (authStore.error) {
     authStore.clearError()

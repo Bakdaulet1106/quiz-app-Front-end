@@ -115,7 +115,6 @@ const handleLogout = async () => {
 .app-header__nav-link:hover {
   opacity: 1;
   background-color: rgba(255, 255, 255, 0.1);
-  transform: translateY(-1px);
 }
 
 .app-header__nav-link--active {
