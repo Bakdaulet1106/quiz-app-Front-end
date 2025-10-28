@@ -1,53 +1,61 @@
 <template>
-  <div :class="['loading-spinner', `loading-spinner--${size}`]">
-    <div class="loading-spinner__circle"></div>
+  <div :class="['loading-spinner', size]" :style="{ color }">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="32" stroke-dashoffset="8">
+        <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite" />
+      </circle>
+    </svg>
   </div>
 </template>
 
-<script setup>
-defineProps({
-  size: {
-    type: String,
-    default: 'medium',
-    validator: (value) => ['small', 'medium', 'large'].includes(value)
+<script>
+export default {
+  name: 'LoadingSpinner',
+  props: {
+    size: {
+      type: String,
+      default: 'medium',
+      validator: (value) => ['small', 'medium', 'large'].includes(value)
+    },
+    color: {
+      type: String,
+      default: 'currentColor'
+    }
   }
-})
+}
 </script>
 
 <style scoped>
 .loading-spinner {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.loading-spinner__circle {
-  border: 2px solid #f3f3f3;
-  border-top: 2px solid var(--primary-color);
-  border-radius: 50%;
+  display: inline-block;
   animation: spin 1s linear infinite;
 }
 
-.loading-spinner--small .loading-spinner__circle {
-  width: 1rem;
-  height: 1rem;
-  border-width: 2px;
+.loading-spinner svg {
+  display: block;
 }
 
-.loading-spinner--medium .loading-spinner__circle {
-  width: 2rem;
-  height: 2rem;
-  border-width: 3px;
+.small {
+  width: 16px;
+  height: 16px;
 }
 
-.loading-spinner--large .loading-spinner__circle {
-  width: 3rem;
-  height: 3rem;
-  border-width: 4px;
+.medium {
+  width: 24px;
+  height: 24px;
+}
+
+.large {
+  width: 32px;
+  height: 32px;
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

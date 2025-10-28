@@ -1,167 +1,128 @@
 <template>
   <div class="login-view">
-    <div class="login-view__background">
-      <div class="login-view__container">
-        <div class="login-view__content">
-          <div class="login-view__header">
-            <h1 class="login-view__title">🎯 QuizMaster</h1>
-            <p class="login-view__subtitle">
-              Современная платформа для тестирования знаний
-            </p>
-          </div>
-
-          <div class="login-view__form-container">
-            <LoginForm 
-              v-if="activeTab === 'login'"
-              @switch-to-register="activeTab = 'register'"
-            />
-            <RegisterForm 
-              v-else
-              @switch-to-login="activeTab = 'login'"
-            />
-          </div>
-
-          <div class="login-view__demo">
-            <h3>Демо доступ:</h3>
-            <div class="login-view__demo-accounts">
-              <div class="login-view__demo-account">
-                <strong>Администратор:</strong><br>
-                Email: admin@quiz.com<br>
-                Пароль: admin123
-              </div>
-              <div class="login-view__demo-account">
-                <strong>Студент:</strong><br>
-                Email: student@quiz.com<br>
-                Пароль: student123
-              </div>
+    <div class="container">
+      <div class="login-content">
+        <div class="login-hero">
+          <h1 class="hero-title">Welcome to QuizMaster</h1>
+          <p class="hero-subtitle">
+            Test your knowledge, track your progress, and become a quiz master!
+            Join thousands of students already learning with our platform.
+          </p>
+          <div class="hero-features">
+            <div class="feature">
+              <div class="feature-icon">🎯</div>
+              <span>Smart Quizzes</span>
+            </div>
+            <div class="feature">
+              <div class="feature-icon">📊</div>
+              <span>Progress Tracking</span>
+            </div>
+            <div class="feature">
+              <div class="feature-icon">⏱️</div>
+              <span>Timed Challenges</span>
             </div>
           </div>
+        </div>
+        <div class="login-form-container">
+          <LoginForm />
         </div>
       </div>
     </div>
   </div>
 </template>
 
-<script setup>
-import { ref } from 'vue'
-import LoginForm from '@/components/auth/LoginForm.vue'
-import RegisterForm from '@/components/auth/RegisterForm.vue'
+<script>
+import LoginForm from '../components/auth/LoginForm.vue'
 
-const activeTab = ref('login')
+export default {
+  name: 'LoginView',
+  components: {
+    LoginForm
+  }
+}
 </script>
 
 <style scoped>
 .login-view {
   min-height: 100vh;
+  background: linear-gradient(135deg, var(--primary-50) 0%, var(--gray-50) 100%);
   display: flex;
   align-items: center;
-  justify-content: center;
+  padding: var(--space-8) 0;
 }
 
-.login-view__background {
-  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-  min-height: 100vh;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem 1rem;
-}
-
-.login-view__container {
-  width: 100%;
-  max-width: 500px;
-}
-
-.login-view__content {
-  text-align: center;
-}
-
-.login-view__header {
-  margin-bottom: 3rem;
-  color: white;
-}
-
-.login-view__title {
-  font-size: 3rem;
-  font-weight: 700;
-  margin: 0 0 1rem 0;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-.login-view__subtitle {
-  font-size: 1.25rem;
-  opacity: 0.9;
-  margin: 0;
-  font-weight: 500;
-}
-
-.login-view__form-container {
-  margin-bottom: 2rem;
-}
-
-.login-view__demo {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  padding: 1.5rem;
-  border-radius: var(--border-radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: white;
-}
-
-.login-view__demo h3 {
-  margin: 0 0 1rem 0;
-  font-size: 1.125rem;
-}
-
-.login-view__demo-accounts {
+.login-content {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  text-align: left;
+  gap: var(--space-12);
+  align-items: center;
+  max-width: 1000px;
+  margin: 0 auto;
 }
 
-.login-view__demo-account {
-  background: rgba(255, 255, 255, 0.1);
-  padding: 1rem;
-  border-radius: var(--border-radius);
-  font-size: 0.875rem;
-  line-height: 1.4;
+.login-hero {
+  padding: var(--space-8);
 }
 
-.login-view__demo-account strong {
-  display: block;
-  margin-bottom: 0.5rem;
-  color: var(--warning-color);
+.hero-title {
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: var(--space-4);
+  line-height: 1.2;
 }
 
-@media (max-width: 768px) {
-  .login-view__title {
-    font-size: 2.5rem;
-  }
+.hero-subtitle {
+  font-size: var(--text-lg);
+  color: var(--gray-600);
+  line-height: 1.6;
+  margin-bottom: var(--space-8);
+}
 
-  .login-view__subtitle {
-    font-size: 1.125rem;
-  }
+.hero-features {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
 
-  .login-view__demo-accounts {
+.feature {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-weight: 500;
+  color: var(--gray-700);
+}
+
+.feature-icon {
+  font-size: var(--text-xl);
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.login-form-container {
+  display: flex;
+  justify-content: center;
+}
+
+@media (max-width: 968px) {
+  .login-content {
     grid-template-columns: 1fr;
-    gap: 0.75rem;
+    gap: var(--space-8);
   }
-
-  .login-view__demo-account {
-    padding: 0.75rem;
-    font-size: 0.8rem;
+  
+  .login-hero {
+    text-align: center;
+    padding: var(--space-4);
   }
-}
-
-@media (max-width: 480px) {
-  .login-view__title {
-    font-size: 2rem;
-  }
-
-  .login-view__background {
-    padding: 1rem;
+  
+  .hero-features {
+    align-items: center;
   }
 }
 </style>

@@ -1,278 +1,263 @@
 <template>
-  <div class="register-form">
-    <h2 class="register-form__title">Регистрация</h2>
-    <form @submit.prevent="handleSubmit" class="register-form__form">
-      <div class="register-form__field">
-        <label for="name" class="register-form__label">Имя</label>
+  <BaseCard class="auth-form">
+    <template #header>
+      <h2 class="form-title">Create Account</h2>
+      <p class="form-subtitle">Sign up to get started</p>
+    </template>
+
+    <form @submit.prevent="handleSubmit" class="form">
+      <div class="form-group">
+        <label for="name" class="form-label">Full Name</label>
         <input
           id="name"
           v-model="form.name"
           type="text"
-          class="register-form__input"
-          :class="{ 'register-form__input--error': errors.name }"
-          placeholder="Введите ваше имя"
-          @blur="validateField('name')"
+          class="form-input"
+          :class="{ error: errors.name }"
+          placeholder="Enter your full name"
+          required
         />
-        <span v-if="errors.name" class="register-form__error">{{ errors.name }}</span>
+        <div v-if="errors.name" class="error-message">{{ errors.name }}</div>
       </div>
 
-      <div class="register-form__field">
-        <label for="email" class="register-form__label">Email</label>
+      <div class="form-group">
+        <label for="email" class="form-label">Email Address</label>
         <input
           id="email"
           v-model="form.email"
           type="email"
-          class="register-form__input"
-          :class="{ 'register-form__input--error': errors.email }"
-          placeholder="Введите ваш email"
-          @blur="validateField('email')"
+          class="form-input"
+          :class="{ error: errors.email }"
+          placeholder="Enter your email"
+          required
         />
-        <span v-if="errors.email" class="register-form__error">{{ errors.email }}</span>
+        <div v-if="errors.email" class="error-message">{{ errors.email }}</div>
       </div>
 
-      <div class="register-form__field">
-        <label for="password" class="register-form__label">Пароль</label>
+      <div class="form-group">
+        <label for="password" class="form-label">Password</label>
         <input
           id="password"
           v-model="form.password"
           type="password"
-          class="register-form__input"
-          :class="{ 'register-form__input--error': errors.password }"
-          placeholder="Введите пароль (мин. 6 символов)"
-          @blur="validateField('password')"
+          class="form-input"
+          :class="{ error: errors.password }"
+          placeholder="Create a password"
+          required
         />
-        <span v-if="errors.password" class="register-form__error">{{ errors.password }}</span>
+        <div v-if="errors.password" class="error-message">{{ errors.password }}</div>
       </div>
 
-      <div class="register-form__field">
-        <label for="confirmPassword" class="register-form__label">Подтвердите пароль</label>
+      <div class="form-group">
+        <label for="confirmPassword" class="form-label">Confirm Password</label>
         <input
           id="confirmPassword"
           v-model="form.confirmPassword"
           type="password"
-          class="register-form__input"
-          :class="{ 'register-form__input--error': errors.confirmPassword }"
-          placeholder="Повторите пароль"
-          @blur="validateField('confirmPassword')"
+          class="form-input"
+          :class="{ error: errors.confirmPassword }"
+          placeholder="Confirm your password"
+          required
         />
-        <span v-if="errors.confirmPassword" class="register-form__error">{{ errors.confirmPassword }}</span>
+        <div v-if="errors.confirmPassword" class="error-message">{{ errors.confirmPassword }}</div>
+      </div>
+
+      <div v-if="authStore.error" class="error-message mb-4">
+        {{ authStore.error }}
       </div>
 
       <BaseButton
         type="submit"
         variant="primary"
         size="large"
-        :loading="authStore.isLoading"
-        :disabled="!isFormValid"
-        fullWidth
-        class="register-form__submit"
+        :isLoading="authStore.isLoading"
+        class="submit-button"
       >
-        Зарегистрироваться
+        Create Account
       </BaseButton>
-
-      <div class="register-form__footer">
-        <p class="register-form__text">
-          Уже есть аккаунт?
-          <a @click="$emit('switch-to-login')" class="register-form__link">
-            Войти
-          </a>
-        </p>
-      </div>
-
-      <div v-if="authStore.error" class="register-form__server-error">
-        ❌ {{ authStore.error }}
-      </div>
     </form>
-  </div>
+
+    <template #footer>
+      <p class="form-footer">
+        Already have an account?
+        <router-link to="/login" class="form-link">Sign in here</router-link>
+      </p>
+    </template>
+  </BaseCard>
 </template>
 
-<script setup>
-import { ref, computed, watch } from 'vue'
-import { useAuthStore } from '@/stores/auth'
-import { validateEmail, validatePassword, validateName } from '@/utils/validators'
-import BaseButton from '@/components/common/BaseButton.vue'
+<script>
+import { reactive } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '../../stores/auth'
+import { validateEmail, validatePassword } from '../../utils/validators'
+import BaseCard from '../common/BaseCard.vue'
+import BaseButton from '../common/BaseButton.vue'
 
-const emit = defineEmits(['switch-to-login'])
+export default {
+  name: 'RegisterForm',
+  components: {
+    BaseCard,
+    BaseButton
+  },
+  setup() {
+    const router = useRouter()
+    const authStore = useAuthStore()
 
-const authStore = useAuthStore()
-
-const form = ref({
-  name: '',
-  email: '',
-  password: '',
-  confirmPassword: ''
-})
-
-const errors = ref({
-  name: '',
-  email: '',
-  password: '',
-  confirmPassword: ''
-})
-
-const validateField = (field) => {
-  switch (field) {
-    case 'name':
-      errors.value.name = validateName(form.value.name)
-      break
-    case 'email':
-      errors.value.email = validateEmail(form.value.email)
-      break
-    case 'password':
-      errors.value.password = validatePassword(form.value.password)
-      break
-    case 'confirmPassword':
-      if (!form.value.confirmPassword) {
-        errors.value.confirmPassword = 'Подтвердите пароль'
-      } else if (form.value.password !== form.value.confirmPassword) {
-        errors.value.confirmPassword = 'Пароли не совпадают'
-      } else {
-        errors.value.confirmPassword = ''
-      }
-      break
-  }
-}
-
-const isFormValid = computed(() => {
-  return form.value.name && 
-         form.value.email && 
-         form.value.password && 
-         form.value.confirmPassword &&
-         !errors.value.name && 
-         !errors.value.email && 
-         !errors.value.password && 
-         !errors.value.confirmPassword
-})
-
-const handleSubmit = async () => {
-  validateField('name')
-  validateField('email')
-  validateField('password')
-  validateField('confirmPassword')
-
-  if (!isFormValid.value) return
-
-  try {
-    await authStore.register({
-      name: form.value.name,
-      email: form.value.email,
-      password: form.value.password
+    const form = reactive({
+      name: '',
+      email: '',
+      password: '',
+      confirmPassword: ''
     })
-  } catch (error) {
-    // Error handled in store
+
+    const errors = reactive({
+      name: '',
+      email: '',
+      password: '',
+      confirmPassword: ''
+    })
+
+    const validateForm = () => {
+      let isValid = true
+
+      // Clear previous errors
+      Object.keys(errors).forEach(key => errors[key] = '')
+
+      if (!form.name.trim()) {
+        errors.name = 'Full name is required'
+        isValid = false
+      }
+
+      if (!form.email) {
+        errors.email = 'Email is required'
+        isValid = false
+      } else if (!validateEmail(form.email)) {
+        errors.email = 'Please enter a valid email address'
+        isValid = false
+      }
+
+      if (!form.password) {
+        errors.password = 'Password is required'
+        isValid = false
+      } else if (!validatePassword(form.password)) {
+        errors.password = 'Password must be at least 6 characters'
+        isValid = false
+      }
+
+      if (!form.confirmPassword) {
+        errors.confirmPassword = 'Please confirm your password'
+        isValid = false
+      } else if (form.password !== form.confirmPassword) {
+        errors.confirmPassword = 'Passwords do not match'
+        isValid = false
+      }
+
+      return isValid
+    }
+
+    const handleSubmit = async () => {
+      if (!validateForm()) return
+
+      const result = await authStore.register({
+        name: form.name,
+        email: form.email,
+        password: form.password
+      })
+      
+      if (result.success) {
+        router.push('/')
+      }
+    }
+
+    return {
+      form,
+      errors,
+      authStore,
+      handleSubmit
+    }
   }
 }
-
-watch([() => form.value.name, () => form.value.email, () => form.value.password, () => form.value.confirmPassword], () => {
-  if (authStore.error) {
-    authStore.clearError()
-  }
-})
 </script>
 
 <style scoped>
-.register-form {
-  background: var(--bg-secondary);
-  padding: 2rem;
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow-lg);
+.auth-form {
   max-width: 400px;
-  width: 100%;
   margin: 0 auto;
 }
 
-.register-form__title {
+.form-title {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--gray-900);
   text-align: center;
-  margin-bottom: 2rem;
-  color: var(--text-primary);
-  font-size: 1.75rem;
+  margin-bottom: var(--space-2);
 }
 
-.register-form__form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.register-form__field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.register-form__label {
-  font-weight: 600;
-  color: var(--text-primary);
-  font-size: 0.875rem;
-}
-
-.register-form__input {
-  padding: 0.75rem 1rem;
-  border: 2px solid #e2e8f0;
-  border-radius: var(--border-radius);
-  font-size: 1rem;
-  transition: var(--transition);
-  background-color: var(--bg-primary);
-}
-
-.register-form__input:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  background-color: var(--bg-secondary);
-}
-
-.register-form__input--error {
-  border-color: var(--danger-color);
-}
-
-.register-form__error {
-  color: var(--danger-color);
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.register-form__submit {
-  margin-top: 0.5rem;
-}
-
-.register-form__footer {
+.form-subtitle {
+  color: var(--gray-600);
   text-align: center;
-  padding-top: 1rem;
-  border-top: 1px solid #e2e8f0;
-}
-
-.register-form__text {
-  color: var(--text-secondary);
   margin: 0;
 }
 
-.register-form__link {
-  color: var(--primary-color);
-  text-decoration: none;
-  font-weight: 600;
-  cursor: pointer;
+.form {
+  margin-top: var(--space-6);
+}
+
+.form-group {
+  margin-bottom: var(--space-4);
+}
+
+.form-label {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-weight: 500;
+  color: var(--gray-700);
+}
+
+.form-input {
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius);
+  font-size: var(--text-base);
   transition: var(--transition);
 }
 
-.register-form__link:hover {
-  color: var(--primary-dark);
-  text-decoration: underline;
+.form-input:focus {
+  outline: none;
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.register-form__server-error {
-  background-color: rgba(239, 68, 68, 0.1);
-  color: var(--danger-color);
-  padding: 0.75rem 1rem;
-  border-radius: var(--border-radius);
-  border: 1px solid var(--danger-color);
-  font-weight: 500;
+.form-input.error {
+  border-color: var(--error-500);
+}
+
+.error-message {
+  color: var(--error-500);
+  font-size: var(--text-sm);
+  margin-top: var(--space-1);
+}
+
+.submit-button {
+  width: 100%;
+  margin-top: var(--space-4);
+}
+
+.form-footer {
   text-align: center;
+  color: var(--gray-600);
+  margin: 0;
 }
 
-@media (max-width: 480px) {
-  .register-form {
-    padding: 1.5rem;
-    margin: 1rem;
-  }
+.form-link {
+  color: var(--primary-500);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.form-link:hover {
+  text-decoration: underline;
 }
 </style>

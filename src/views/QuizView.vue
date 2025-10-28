@@ -1,356 +1,544 @@
 <template>
   <div class="quiz-view">
-    <div class="container">
-      <!-- Активный квиз -->
-      <div v-if="questionsStore.quizStarted && !questionsStore.quizCompleted" class="quiz-view__active">
-        <div class="quiz-view__header">
-          <div class="quiz-view__quiz-info">
-            <h1 class="quiz-view__title">Прохождение квиза</h1>
-            <div class="quiz-view__progress">
-              <div class="quiz-view__progress-text">
-                Вопрос {{ questionsStore.currentQuestionIndex + 1 }} из {{ questionsStore.totalQuestions }}
-              </div>
-              <div class="quiz-view__progress-bar">
-                <div 
-                  class="quiz-view__progress-fill"
-                  :style="{ width: `${questionsStore.progress}%` }"
-                ></div>
-              </div>
-            </div>
+    <div class="container" v-if="currentQuiz">
+      <!-- Quiz Header -->
+      <div class="quiz-header">
+        <div class="quiz-info">
+          <h1 class="quiz-title">{{ currentQuiz.title }}</h1>
+          <p class="quiz-description">{{ currentQuiz.description }}</p>
+          <div class="quiz-meta">
+            <span class="meta-item">
+              <strong>{{ currentQuiz.questions.length }}</strong> questions
+            </span>
+            <span class="meta-item">
+              <strong>{{ formatTime(currentQuiz.duration) }}</strong> time limit
+            </span>
+            <span class="meta-item" v-if="currentQuiz.category">
+              Category: <strong>{{ currentQuiz.category }}</strong>
+            </span>
           </div>
-
-          <QuizTimer :duration="300" />
         </div>
+        <QuizTimer
+          :duration="currentQuiz.duration"
+          :isActive="isQuizActive"
+          @time-up="handleTimeUp"
+        />
+      </div>
 
-        <QuestionCard />
-
-        <div v-if="quizStore.isTimeUp" class="quiz-view__time-up">
-          <div class="quiz-view__time-up-content">
-            <h2>⏰ Время вышло!</h2>
-            <p>Квиз будет завершен автоматически</p>
-            <BaseButton variant="primary" @click="completeQuiz">
-              Посмотреть результаты
-            </BaseButton>
-          </div>
+      <!-- Quiz Progress -->
+      <div class="quiz-progress">
+        <div class="progress-bar">
+          <div
+            class="progress-fill"
+            :style="{ width: progressPercentage + '%' }"
+          ></div>
+        </div>
+        <div class="progress-text">
+          Question {{ currentQuestionIndex + 1 }} of {{ currentQuiz.questions.length }}
         </div>
       </div>
 
-      <!-- Завершенный квиз -->
-      <div v-else-if="questionsStore.quizCompleted" class="quiz-view__completed">
-        <ResultsView />
+      <!-- Current Question -->
+      <div class="question-section" v-if="currentQuestion">
+        <QuestionDisplay
+          :question="currentQuestion"
+          :selectedAnswer="userAnswers[currentQuestionIndex]"
+          @answer-selected="handleAnswerSelect"
+        />
       </div>
 
-      <!-- Начало квиза -->
-      <div v-else class="quiz-view__start">
-        <div class="quiz-view__start-content">
-          <h1 class="quiz-view__start-title">Готовы начать?</h1>
-          <div class="quiz-view__quiz-details">
-            <div class="quiz-view__detail">
-              <span class="quiz-view__detail-icon">❓</span>
-              <span class="quiz-view__detail-text">
-                {{ questionsStore.questions.length }} вопросов
-              </span>
-            </div>
-            <div class="quiz-view__detail">
-              <span class="quiz-view__detail-icon">⏱️</span>
-              <span class="quiz-view__detail-text">5 минут</span>
-            </div>
-            <div class="quiz-view__detail">
-              <span class="quiz-view__detail-icon">🎯</span>
-              <span class="quiz-view__detail-text">Случайная выборка вопросов</span>
-            </div>
-          </div>
+      <!-- Navigation Buttons -->
+      <div class="navigation-buttons">
+        <BaseButton
+          @click="previousQuestion"
+          :disabled="currentQuestionIndex === 0"
+          variant="outline"
+        >
+          Previous
+        </BaseButton>
+        
+        <BaseButton
+          v-if="currentQuestionIndex < currentQuiz.questions.length - 1"
+          @click="nextQuestion"
+          variant="primary"
+        >
+          Next Question
+        </BaseButton>
+        
+        <BaseButton
+          v-else
+          @click="submitQuiz"
+          variant="primary"
+          :isLoading="resultsStore.isLoading"
+        >
+          Submit Quiz
+        </BaseButton>
+      </div>
 
-          <div class="quiz-view__instructions">
-            <h3>Инструкции:</h3>
-            <ul>
-              <li>📝 Выбирайте один правильный ответ из предложенных вариантов</li>
-              <li>⏱️ Следите за временем - на весь тест отводится 5 минут</li>
-              <li>↔️ Используйте кнопки "Назад" и "Далее" для навигации</li>
-              <li>✅ Результаты будут показаны сразу после завершения</li>
-            </ul>
-          </div>
-
-          <BaseButton
-            variant="primary"
-            size="large"
-            @click="startQuiz"
-            class="quiz-view__start-button"
+      <!-- Question Navigation -->
+      <div class="question-navigation">
+        <h3>Question Navigation</h3>
+        <div class="navigation-grid">
+          <button
+            v-for="(question, index) in currentQuiz.questions"
+            :key="index"
+            @click="goToQuestion(index)"
+            :class="[
+              'nav-button',
+              {
+                'answered': userAnswers[index] !== undefined,
+                'current': index === currentQuestionIndex
+              }
+            ]"
           >
-            🚀 Начать квиз
-          </BaseButton>
+            {{ index + 1 }}
+          </button>
         </div>
       </div>
     </div>
+
+    <LoadingSpinner v-else-if="quizStore.isLoading" class="loading-center" />
+
+    <div v-else class="error-state">
+      <div class="error-icon">❌</div>
+      <h3>Quiz Not Found</h3>
+      <p>The quiz you're looking for doesn't exist or is no longer available.</p>
+      <BaseButton @click="$router.push('/quizzes')" variant="primary">
+        Back to Quizzes
+      </BaseButton>
+    </div>
+
+    <!-- Submit Confirmation Modal -->
+    <BaseModal
+      v-model:isOpen="showSubmitModal"
+      title="Submit Quiz?"
+      size="small"
+    >
+      <div class="submit-modal-content">
+        <p>Are you sure you want to submit your quiz? You cannot change your answers after submission.</p>
+        
+        <div class="quiz-summary">
+          <div class="summary-item">
+            <span>Questions Answered:</span>
+            <strong>{{ answeredQuestions }}/{{ currentQuiz?.questions.length }}</strong>
+          </div>
+          <div class="summary-item">
+            <span>Time Remaining:</span>
+            <strong>{{ formatTime(timeRemaining) }}</strong>
+          </div>
+        </div>
+        
+        <template #footer>
+          <BaseButton @click="showSubmitModal = false" variant="outline">
+            Continue Quiz
+          </BaseButton>
+          <BaseButton @click="confirmSubmit" variant="primary" :isLoading="resultsStore.isLoading">
+            Submit Quiz
+          </BaseButton>
+        </template>
+      </div>
+    </BaseModal>
   </div>
 </template>
 
-<script setup>
-import { onMounted, onUnmounted } from 'vue'
-import { useQuestionsStore } from '@/stores/questions'
-import { useQuizStore } from '@/stores/quiz'
-import QuestionCard from '@/components/student/QuestionCard.vue'
-import QuizTimer from '@/components/student/QuizTimer.vue'
-import ResultsView from '@/components/student/ResultsView.vue'
-import BaseButton from '@/components/common/BaseButton.vue'
+<script>
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useQuizStore } from '../stores/quizzes'
+import { useResultsStore } from '../stores/results'
+import { StorageService } from '../services/storageService'
+import QuizTimer from '../components/student/QuizTimer.vue'
+import QuestionDisplay from '../components/student/QuestionDisplay.vue'
+import BaseModal from '../components/common/BaseModal.vue'
+import BaseButton from '../components/common/BaseButton.vue'
+import LoadingSpinner from '../components/common/LoadingSpinner.vue'
+import { formatTime } from '../utils/helpers'
 
-const questionsStore = useQuestionsStore()
-const quizStore = useQuizStore()
+export default {
+  name: 'QuizView',
+  components: {
+    QuizTimer,
+    QuestionDisplay,
+    BaseModal,
+    BaseButton,
+    LoadingSpinner
+  },
+  setup() {
+    const route = useRoute()
+    const router = useRouter()
+    const quizStore = useQuizStore()
+    const resultsStore = useResultsStore()
 
-const startQuiz = () => {
-  questionsStore.startQuiz()
-  quizStore.startTimer(300)
-}
+    const currentQuestionIndex = ref(0)
+    const userAnswers = ref([])
+    const isQuizActive = ref(true)
+    const showSubmitModal = ref(false)
+    const timeRemaining = ref(0)
+    const startTime = ref(null)
 
-const completeQuiz = () => {
-  questionsStore.completeQuiz()
-  quizStore.stopTimer()
-}
+    const quizId = parseInt(route.params.id)
 
-onMounted(() => {
-  // Если вопросы не загружены, возвращаемся на страницу студента
-  if (questionsStore.questions.length === 0) {
-    // В реальном приложении здесь был бы redirect
-    console.log('No questions loaded')
+    const currentQuiz = computed(() => quizStore.currentQuiz)
+    const currentQuestion = computed(() => {
+      return currentQuiz.value?.questions[currentQuestionIndex.value]
+    })
+
+    const progressPercentage = computed(() => {
+      if (!currentQuiz.value) return 0
+      return ((currentQuestionIndex.value + 1) / currentQuiz.value.questions.length) * 100
+    })
+
+    const answeredQuestions = computed(() => {
+      return userAnswers.value.filter(answer => answer !== undefined).length
+    })
+
+    const loadProgress = () => {
+      const progress = StorageService.getQuizProgress(quizId)
+      if (progress) {
+        userAnswers.value = progress.answers || []
+        currentQuestionIndex.value = progress.currentQuestionIndex || 0
+        timeRemaining.value = progress.timeRemaining || currentQuiz.value.duration
+      } else {
+        userAnswers.value = new Array(currentQuiz.value.questions.length).fill(undefined)
+        timeRemaining.value = currentQuiz.value.duration
+      }
+      startTime.value = Date.now()
+    }
+
+    const saveProgress = () => {
+      if (!currentQuiz.value) return
+
+      const timeSpent = Math.floor((Date.now() - startTime.value) / 1000)
+      const remainingTime = Math.max(0, currentQuiz.value.duration - timeSpent)
+
+      StorageService.saveQuizProgress(quizId, {
+        answers: userAnswers.value,
+        currentQuestionIndex: currentQuestionIndex.value,
+        timeRemaining: remainingTime,
+        startTime: startTime.value
+      })
+    }
+
+    const handleAnswerSelect = (answerIndex) => {
+      userAnswers.value[currentQuestionIndex.value] = answerIndex
+      saveProgress()
+    }
+
+    const nextQuestion = () => {
+      if (currentQuestionIndex.value < currentQuiz.value.questions.length - 1) {
+        currentQuestionIndex.value++
+        saveProgress()
+      }
+    }
+
+    const previousQuestion = () => {
+      if (currentQuestionIndex.value > 0) {
+        currentQuestionIndex.value--
+        saveProgress()
+      }
+    }
+
+    const goToQuestion = (index) => {
+      currentQuestionIndex.value = index
+      saveProgress()
+    }
+
+    const submitQuiz = () => {
+      showSubmitModal.value = true
+    }
+
+    const confirmSubmit = async () => {
+      const timeSpent = Math.floor((Date.now() - startTime.value) / 1000)
+      
+      const result = await resultsStore.submitQuizResult(
+        currentQuiz.value,
+        userAnswers.value,
+        timeSpent
+      )
+      
+      if (result.success) {
+        StorageService.clearQuizProgress(quizId)
+        router.push(`/results/${result.result.id}`)
+      }
+    }
+
+    const handleTimeUp = () => {
+      isQuizActive.value = false
+      submitQuiz()
+    }
+
+    const handleBeforeUnload = (event) => {
+      if (isQuizActive.value) {
+        saveProgress()
+        event.preventDefault()
+        event.returnValue = 'Your quiz progress will be saved. Are you sure you want to leave?'
+      }
+    }
+
+    onMounted(async () => {
+      await quizStore.loadQuizById(quizId)
+      if (quizStore.currentQuiz) {
+        loadProgress()
+        window.addEventListener('beforeunload', handleBeforeUnload)
+      }
+    })
+
+    onUnmounted(() => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    })
+
+    return {
+      quizStore,
+      resultsStore,
+      currentQuiz,
+      currentQuestion,
+      currentQuestionIndex,
+      userAnswers,
+      isQuizActive,
+      showSubmitModal,
+      timeRemaining,
+      progressPercentage,
+      answeredQuestions,
+      handleAnswerSelect,
+      nextQuestion,
+      previousQuestion,
+      goToQuestion,
+      submitQuiz,
+      confirmSubmit,
+      handleTimeUp,
+      formatTime
+    }
   }
-})
-
-onUnmounted(() => {
-  quizStore.stopTimer()
-})
+}
 </script>
 
 <style scoped>
 .quiz-view {
-  padding: 1rem 0;
-  min-height: calc(100vh - 200px);
+  padding-bottom: var(--space-8);
 }
 
-.quiz-view__header {
+.quiz-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 2rem;
-  gap: 2rem;
-  flex-wrap: wrap;
-}
-
-.quiz-view__quiz-info {
-  flex: 1;
-  min-width: 300px;
-}
-
-.quiz-view__title {
-  margin: 0 0 1rem 0;
-  color: var(--text-primary);
-  font-size: 2rem;
-}
-
-.quiz-view__progress {
-  background: var(--bg-secondary);
-  padding: 1rem 1.5rem;
-  border-radius: var(--border-radius);
+  gap: var(--space-6);
+  margin-bottom: var(--space-8);
+  padding: var(--space-6);
+  background: white;
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
 }
 
-.quiz-view__progress-text {
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 0.5rem;
+.quiz-info {
+  flex: 1;
 }
 
-.quiz-view__progress-bar {
+.quiz-title {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: var(--space-2);
+}
+
+.quiz-description {
+  color: var(--gray-600);
+  margin-bottom: var(--space-4);
+  line-height: 1.6;
+}
+
+.quiz-meta {
+  display: flex;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+}
+
+.meta-item {
+  color: var(--gray-600);
+  font-size: var(--text-sm);
+}
+
+.meta-item strong {
+  color: var(--gray-900);
+}
+
+.quiz-progress {
+  margin-bottom: var(--space-6);
+}
+
+.progress-bar {
   width: 100%;
   height: 8px;
-  background-color: var(--bg-primary);
+  background: var(--gray-200);
   border-radius: 4px;
   overflow: hidden;
+  margin-bottom: var(--space-2);
 }
 
-.quiz-view__progress-fill {
+.progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+  background: var(--primary-500);
   border-radius: 4px;
   transition: width 0.3s ease;
 }
 
-.quiz-view__time-up {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.quiz-view__time-up-content {
-  background: var(--bg-secondary);
-  padding: 3rem;
-  border-radius: var(--border-radius-lg);
+.progress-text {
   text-align: center;
-  box-shadow: var(--shadow-lg);
-  max-width: 400px;
-  width: 90%;
+  color: var(--gray-600);
+  font-size: var(--text-sm);
+  font-weight: 500;
 }
 
-.quiz-view__time-up-content h2 {
-  margin: 0 0 1rem 0;
-  color: var(--danger-color);
-  font-size: 1.75rem;
+.question-section {
+  margin-bottom: var(--space-6);
 }
 
-.quiz-view__time-up-content p {
-  margin: 0 0 2rem 0;
-  color: var(--text-secondary);
-  font-size: 1.125rem;
-}
-
-.quiz-view__start {
+.navigation-buttons {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  min-height: 60vh;
+  margin-bottom: var(--space-8);
+  padding: var(--space-4);
+  background: white;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
 }
 
-.quiz-view__start-content {
-  background: var(--bg-secondary);
-  padding: 3rem;
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow-lg);
-  text-align: center;
-  max-width: 600px;
-  width: 100%;
+.question-navigation {
+  background: white;
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
 }
 
-.quiz-view__start-title {
-  margin: 0 0 2rem 0;
-  color: var(--text-primary);
-  font-size: 2.5rem;
-  font-weight: 700;
-}
-
-.quiz-view__quiz-details {
-  display: flex;
-  justify-content: center;
-  gap: 2rem;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-}
-
-.quiz-view__detail {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  background: var(--bg-primary);
-  padding: 1rem 1.5rem;
-  border-radius: var(--border-radius);
-  border-left: 4px solid var(--primary-color);
-}
-
-.quiz-view__detail-icon {
-  font-size: 1.5rem;
-}
-
-.quiz-view__detail-text {
+.question-navigation h3 {
+  font-size: var(--text-lg);
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--gray-900);
+  margin-bottom: var(--space-4);
 }
 
-.quiz-view__instructions {
-  text-align: left;
-  margin-bottom: 2rem;
-  padding: 1.5rem;
-  background: var(--bg-primary);
-  border-radius: var(--border-radius);
-  border-left: 4px solid var(--info-color);
+.navigation-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+  gap: var(--space-2);
 }
 
-.quiz-view__instructions h3 {
-  margin: 0 0 1rem 0;
-  color: var(--text-primary);
-  font-size: 1.25rem;
+.nav-button {
+  width: 50px;
+  height: 50px;
+  border: 2px solid var(--gray-300);
+  border-radius: var(--radius);
+  background: white;
+  color: var(--gray-700);
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.quiz-view__instructions ul {
-  margin: 0;
-  padding-left: 1rem;
+.nav-button:hover {
+  border-color: var(--primary-500);
+  color: var(--primary-500);
 }
 
-.quiz-view__instructions li {
-  margin-bottom: 0.5rem;
-  color: var(--text-secondary);
-  line-height: 1.5;
+.nav-button.answered {
+  background: var(--primary-500);
+  border-color: var(--primary-500);
+  color: white;
 }
 
-.quiz-view__start-button {
-  font-size: 1.25rem;
-  padding: 1rem 2rem;
-  min-width: 200px;
+.nav-button.current {
+  border-color: var(--primary-700);
+  background: var(--primary-100);
+  color: var(--primary-700);
+}
+
+.loading-center {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-12);
+}
+
+.error-state {
+  text-align: center;
+  padding: var(--space-12);
+  background: white;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.error-icon {
+  font-size: 4rem;
+  margin-bottom: var(--space-4);
+}
+
+.error-state h3 {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--gray-900);
+  margin-bottom: var(--space-2);
+}
+
+.error-state p {
+  color: var(--gray-600);
+  margin-bottom: var(--space-6);
+}
+
+.submit-modal-content {
+  text-align: center;
+}
+
+.submit-modal-content p {
+  color: var(--gray-700);
+  margin-bottom: var(--space-6);
+  line-height: 1.6;
+}
+
+.quiz-summary {
+  background: var(--gray-50);
+  padding: var(--space-4);
+  border-radius: var(--radius);
+  margin-bottom: var(--space-6);
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-2) 0;
+  color: var(--gray-700);
+}
+
+.summary-item:not(:last-child) {
+  border-bottom: 1px solid var(--gray-200);
 }
 
 @media (max-width: 768px) {
-  .quiz-view {
-    padding: 0.5rem 0;
-  }
-
-  .quiz-view__header {
+  .quiz-header {
     flex-direction: column;
-    align-items: stretch;
-  }
-
-  .quiz-view__quiz-info {
-    min-width: auto;
-  }
-
-  .quiz-view__title {
-    font-size: 1.5rem;
     text-align: center;
   }
-
-  .quiz-view__start-content {
-    padding: 2rem 1.5rem;
-    margin: 1rem;
-  }
-
-  .quiz-view__start-title {
-    font-size: 2rem;
-  }
-
-  .quiz-view__quiz-details {
-    flex-direction: column;
-    gap: 1rem;
-    align-items: stretch;
-  }
-
-  .quiz-view__detail {
+  
+  .quiz-meta {
     justify-content: center;
   }
-
-  .quiz-view__time-up-content {
-    padding: 2rem;
-    margin: 1rem;
+  
+  .navigation-buttons {
+    flex-direction: column;
+    gap: var(--space-3);
   }
-}
-
-@media (max-width: 480px) {
-  .quiz-view__start-content {
-    padding: 1.5rem 1rem;
+  
+  .navigation-grid {
+    grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
   }
-
-  .quiz-view__start-title {
-    font-size: 1.75rem;
-  }
-
-  .quiz-view__instructions {
-    padding: 1rem;
-  }
-
-  .quiz-view__instructions h3 {
-    font-size: 1.125rem;
+  
+  .nav-button {
+    width: 40px;
+    height: 40px;
   }
 }
 </style>

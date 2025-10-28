@@ -1,34 +1,35 @@
 <template>
   <div id="app">
-    <AppHeader v-if="showHeader" />
+    <AppHeader />
     <main class="main-content">
-      <RouterView />
+      <router-view />
     </main>
-    <AppFooter v-if="showFooter" />
+    <AppFooter />
   </div>
 </template>
 
-<script setup>
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
-import AppHeader from '@/components/common/AppHeader.vue'
-import AppFooter from '@/components/common/AppFooter.vue'
+<script>
+import AppHeader from './components/layout/AppHeader.vue'
+import AppFooter from './components/layout/AppFooter.vue'
+import { useAuthStore } from './stores/auth'
 
-const route = useRoute()
-
-const showHeader = computed(() => !route.meta.hideLayout)
-const showFooter = computed(() => !route.meta.hideLayout)
+export default {
+  name: 'App',
+  components: {
+    AppHeader,
+    AppFooter
+  },
+  setup() {
+    const authStore = useAuthStore()
+    return { authStore }
+  }
+}
 </script>
 
 <style scoped>
-#app {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
 .main-content {
   flex: 1;
-  padding: 0;
+  min-height: calc(100vh - 140px);
+  padding: var(--space-6) 0;
 }
 </style>

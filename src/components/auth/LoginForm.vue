@@ -1,261 +1,214 @@
 <template>
-  <div class="login-form">
-    <h2 class="login-form__title">Вход в систему</h2>
-    <form @submit.prevent="handleSubmit" class="login-form__form">
-      <div class="login-form__field">
-        <label for="email" class="login-form__label">Email</label>
+  <BaseCard class="auth-form">
+    <template #header>
+      <h2 class="form-title">Welcome Back</h2>
+      <p class="form-subtitle">Sign in to your account</p>
+    </template>
+
+    <form @submit.prevent="handleSubmit" class="form">
+      <div class="form-group">
+        <label for="email" class="form-label">Email Address</label>
         <input
           id="email"
           v-model="form.email"
           type="email"
-          class="login-form__input"
-          :class="{ 'login-form__input--error': errors.email }"
-          placeholder="Введите ваш email"
-          @blur="validateField('email')"
+          class="form-input"
+          :class="{ error: errors.email }"
+          placeholder="Enter your email"
+          required
         />
-        <span v-if="errors.email" class="login-form__error">{{ errors.email }}</span>
+        <div v-if="errors.email" class="error-message">{{ errors.email }}</div>
       </div>
 
-      <div class="login-form__field">
-        <label for="password" class="login-form__label">Пароль</label>
+      <div class="form-group">
+        <label for="password" class="form-label">Password</label>
         <input
           id="password"
           v-model="form.password"
           type="password"
-          class="login-form__input"
-          :class="{ 'login-form__input--error': errors.password }"
-          placeholder="Введите ваш пароль"
-          @blur="validateField('password')"
+          class="form-input"
+          :class="{ error: errors.password }"
+          placeholder="Enter your password"
+          required
         />
-        <span v-if="errors.password" class="login-form__error">{{ errors.password }}</span>
+        <div v-if="errors.password" class="error-message">{{ errors.password }}</div>
+      </div>
+
+      <div v-if="authStore.error" class="error-message mb-4">
+        {{ authStore.error }}
       </div>
 
       <BaseButton
         type="submit"
         variant="primary"
         size="large"
-        :loading="authStore.isLoading"
-        :disabled="!isFormValid"
-        fullWidth
-        class="login-form__submit"
+        :isLoading="authStore.isLoading"
+        class="submit-button"
       >
-        Войти
+        Sign In
       </BaseButton>
-
-      <div class="login-form__footer">
-        <p class="login-form__text">
-          Нет аккаунта?
-          <a @click="$emit('switch-to-register')" class="login-form__link">
-            Зарегистрироваться
-          </a>
-        </p>
-      </div>
-
-      <div v-if="authStore.error" class="login-form__server-error">
-        ❌ {{ authStore.error }}
-      </div>
     </form>
 
-    <div class="login-form__demo">
-      <h4>Демо аккаунты:</h4>
-      <div class="login-form__demo-accounts">
-        <div class="login-form__demo-account">
-          <strong>Админ:</strong> admin@quiz.com / admin123
-        </div>
-        <div class="login-form__demo-account">
-          <strong>Студент:</strong> student@quiz.com / student123
-        </div>
-      </div>
-    </div>
-  </div>
+    <template #footer>
+      <p class="form-footer">
+        Don't have an account?
+        <router-link to="/register" class="form-link">Sign up here</router-link>
+      </p>
+    </template>
+  </BaseCard>
 </template>
 
-<script setup>
-import { ref, computed, watch } from 'vue'
-import { useAuthStore } from '@/stores/auth'
-import { validateEmail, validatePassword } from '@/utils/validators'
-import BaseButton from '@/components/common/BaseButton.vue'
+<script>
+import { ref, reactive } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '../../stores/auth'
+import { validateEmail } from '../../utils/validators'
+import BaseCard from '../common/BaseCard.vue'
+import BaseButton from '../common/BaseButton.vue'
 
-const emit = defineEmits(['switch-to-register'])
+export default {
+  name: 'LoginForm',
+  components: {
+    BaseCard,
+    BaseButton
+  },
+  setup() {
+    const router = useRouter()
+    const authStore = useAuthStore()
 
-const authStore = useAuthStore()
+    const form = reactive({
+      email: '',
+      password: ''
+    })
 
-const form = ref({
-  email: '',
-  password: ''
-})
+    const errors = reactive({
+      email: '',
+      password: ''
+    })
 
-const errors = ref({
-  email: '',
-  password: ''
-})
+    const validateForm = () => {
+      let isValid = true
 
-const validateField = (field) => {
-  switch (field) {
-    case 'email':
-      errors.value.email = validateEmail(form.value.email)
-      break
-    case 'password':
-      errors.value.password = validatePassword(form.value.password)
-      break
+      // Clear previous errors
+      Object.keys(errors).forEach(key => errors[key] = '')
+
+      if (!form.email) {
+        errors.email = 'Email is required'
+        isValid = false
+      } else if (!validateEmail(form.email)) {
+        errors.email = 'Please enter a valid email address'
+        isValid = false
+      }
+
+      if (!form.password) {
+        errors.password = 'Password is required'
+        isValid = false
+      } else if (form.password.length < 6) {
+        errors.password = 'Password must be at least 6 characters'
+        isValid = false
+      }
+
+      return isValid
+    }
+
+    const handleSubmit = async () => {
+      if (!validateForm()) return
+
+      const result = await authStore.login(form.email, form.password)
+      
+      if (result.success) {
+        router.push('/')
+      }
+    }
+
+    return {
+      form,
+      errors,
+      authStore,
+      handleSubmit
+    }
   }
 }
-
-const isFormValid = computed(() => {
-  return form.value.email && 
-         form.value.password && 
-         !errors.value.email && 
-         !errors.value.password
-})
-
-const handleSubmit = async () => {
-  validateField('email')
-  validateField('password')
-
-  if (!isFormValid.value) return
-
-  try {
-    await authStore.login(form.value.email, form.value.password)
-  } catch (error) {
-    // Error handled in store
-  }
-}
-
-watch([() => form.value.email, () => form.value.password], () => {
-  if (authStore.error) {
-    authStore.clearError()
-  }
-})
 </script>
 
 <style scoped>
-.login-form {
-  background: var(--bg-secondary);
-  padding: 2rem;
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow-lg);
+.auth-form {
   max-width: 400px;
-  width: 100%;
   margin: 0 auto;
 }
 
-.login-form__title {
+.form-title {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--gray-900);
   text-align: center;
-  margin-bottom: 2rem;
-  color: var(--text-primary);
-  font-size: 1.75rem;
+  margin-bottom: var(--space-2);
 }
 
-.login-form__form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.login-form__field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.login-form__label {
-  font-weight: 600;
-  color: var(--text-primary);
-  font-size: 0.875rem;
-}
-
-.login-form__input {
-  padding: 0.75rem 1rem;
-  border: 2px solid #e2e8f0;
-  border-radius: var(--border-radius);
-  font-size: 1rem;
-  transition: var(--transition);
-  background-color: var(--bg-primary);
-}
-
-.login-form__input:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  background-color: var(--bg-secondary);
-}
-
-.login-form__input--error {
-  border-color: var(--danger-color);
-}
-
-.login-form__error {
-  color: var(--danger-color);
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.login-form__submit {
-  margin-top: 0.5rem;
-}
-
-.login-form__footer {
+.form-subtitle {
+  color: var(--gray-600);
   text-align: center;
-  padding-top: 1rem;
-  border-top: 1px solid #e2e8f0;
-}
-
-.login-form__text {
-  color: var(--text-secondary);
   margin: 0;
 }
 
-.login-form__link {
-  color: var(--primary-color);
-  text-decoration: none;
-  font-weight: 600;
-  cursor: pointer;
+.form {
+  margin-top: var(--space-6);
+}
+
+.form-group {
+  margin-bottom: var(--space-4);
+}
+
+.form-label {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-weight: 500;
+  color: var(--gray-700);
+}
+
+.form-input {
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius);
+  font-size: var(--text-base);
   transition: var(--transition);
 }
 
-.login-form__link:hover {
-  color: var(--primary-dark);
-  text-decoration: underline;
+.form-input:focus {
+  outline: none;
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.login-form__server-error {
-  background-color: rgba(239, 68, 68, 0.1);
-  color: var(--danger-color);
-  padding: 0.75rem 1rem;
-  border-radius: var(--border-radius);
-  border: 1px solid var(--danger-color);
-  font-weight: 500;
+.form-input.error {
+  border-color: var(--error-500);
+}
+
+.error-message {
+  color: var(--error-500);
+  font-size: var(--text-sm);
+  margin-top: var(--space-1);
+}
+
+.submit-button {
+  width: 100%;
+  margin-top: var(--space-4);
+}
+
+.form-footer {
   text-align: center;
+  color: var(--gray-600);
+  margin: 0;
 }
 
-.login-form__demo {
-  margin-top: 2rem;
-  padding: 1rem;
-  background-color: rgba(59, 130, 246, 0.1);
-  border-radius: var(--border-radius);
-  border: 1px solid var(--primary-color);
+.form-link {
+  color: var(--primary-500);
+  text-decoration: none;
+  font-weight: 500;
 }
 
-.login-form__demo h4 {
-  margin: 0 0 0.5rem 0;
-  color: var(--primary-color);
-  font-size: 0.875rem;
-}
-
-.login-form__demo-accounts {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.login-form__demo-account {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-}
-
-@media (max-width: 480px) {
-  .login-form {
-    padding: 1.5rem;
-    margin: 1rem;
-  }
+.form-link:hover {
+  text-decoration: underline;
 }
 </style>

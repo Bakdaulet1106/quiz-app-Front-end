@@ -1,187 +1,205 @@
 <template>
-  <div class="quiz-timer">
-    <div 
-      class="quiz-timer__circle"
-      :class="{
-        'quiz-timer__circle--warning': timeRemaining <= 60,
-        'quiz-timer__circle--danger': timeRemaining <= 30
-      }"
-    >
-      <svg class="quiz-timer__svg" viewBox="0 0 100 100">
-        <circle 
-          class="quiz-timer__background"
-          cx="50" 
-          cy="50" 
-          r="45" 
-        />
-        <circle 
-          class="quiz-timer__progress"
-          cx="50" 
-          cy="50" 
-          r="45" 
-          :stroke-dasharray="circumference"
-          :stroke-dashoffset="progressOffset"
-        />
-      </svg>
-      <div class="quiz-timer__content">
-        <div class="quiz-timer__time">{{ formattedTime }}</div>
-        <div class="quiz-timer__label">осталось</div>
+  <div class="quiz-timer" :class="timerClass">
+    <div class="timer-content">
+      <div class="timer-icon">⏱️</div>
+      <div class="timer-text">
+        <div class="time-display">{{ formatTime(timeRemaining) }}</div>
+        <div class="time-label">Time Remaining</div>
       </div>
     </div>
-
-    <div 
-      v-if="timeRemaining <= 60 && timeRemaining > 0"
-      class="quiz-timer__warning"
-    >
-      ⚠️ Время заканчивается!
-    </div>
-
-    <div 
-      v-if="timeRemaining === 0"
-      class="quiz-timer__time-up"
-    >
-      ⏰ Время вышло!
+    
+    <div class="timer-progress">
+      <div 
+        class="progress-bar" 
+        :style="{ width: progressPercentage + '%' }"
+      ></div>
     </div>
   </div>
 </template>
 
-<script setup>
-import { computed } from 'vue'
-import { useQuizStore } from '@/stores/quiz'
+<script>
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { formatTime } from '../../utils/helpers'
 
-const quizStore = useQuizStore()
+export default {
+  name: 'QuizTimer',
+  props: {
+    duration: {
+      type: Number,
+      required: true
+    },
+    isActive: {
+      type: Boolean,
+      default: true
+    }
+  },
+  emits: ['time-up'],
+  setup(props, { emit }) {
+    const timeRemaining = ref(props.duration)
+    const timerInterval = ref(null)
 
-const timeRemaining = computed(() => quizStore.timeRemaining)
-const isTimerRunning = computed(() => quizStore.isTimerRunning)
+    const progressPercentage = computed(() => {
+      return (timeRemaining.value / props.duration) * 100
+    })
 
-const formattedTime = computed(() => {
-  const minutes = Math.floor(timeRemaining.value / 60)
-  const seconds = timeRemaining.value % 60
-  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
-})
+    const timerClass = computed(() => {
+      if (timeRemaining.value <= 60) return 'critical'
+      if (timeRemaining.value <= 300) return 'warning'
+      return 'normal'
+    })
 
-const circumference = 2 * Math.PI * 45
-const progressOffset = computed(() => {
-  const progress = (300 - timeRemaining.value) / 300
-  return circumference * (1 - progress)
-})
+    const startTimer = () => {
+      if (timerInterval.value) {
+        clearInterval(timerInterval.value)
+      }
+
+      timerInterval.value = setInterval(() => {
+        if (timeRemaining.value > 0) {
+          timeRemaining.value--
+        } else {
+          clearInterval(timerInterval.value)
+          emit('time-up')
+        }
+      }, 1000)
+    }
+
+    const stopTimer = () => {
+      if (timerInterval.value) {
+        clearInterval(timerInterval.value)
+        timerInterval.value = null
+      }
+    }
+
+    watch(() => props.isActive, (isActive) => {
+      if (isActive && timeRemaining.value > 0) {
+        startTimer()
+      } else {
+        stopTimer()
+      }
+    })
+
+    onMounted(() => {
+      if (props.isActive) {
+        startTimer()
+      }
+    })
+
+    onUnmounted(() => {
+      stopTimer()
+    })
+
+    return {
+      timeRemaining,
+      progressPercentage,
+      timerClass,
+      formatTime
+    }
+  }
+}
 </script>
 
 <style scoped>
 .quiz-timer {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem;
+  background: white;
+  border: 2px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  min-width: 150px;
+  text-align: center;
+  transition: var(--transition);
 }
 
-.quiz-timer__circle {
-  position: relative;
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  background: var(--bg-secondary);
-  box-shadow: var(--shadow);
+.quiz-timer.normal {
+  border-color: var(--primary-500);
 }
 
-.quiz-timer__svg {
-  width: 100%;
-  height: 100%;
-  transform: rotate(-90deg);
+.quiz-timer.warning {
+  border-color: var(--warning-500);
+  background: var(--warning-50);
 }
 
-.quiz-timer__background {
-  fill: none;
-  stroke: var(--bg-primary);
-  stroke-width: 8;
-}
-
-.quiz-timer__progress {
-  fill: none;
-  stroke: var(--primary-color);
-  stroke-width: 8;
-  stroke-linecap: round;
-  transition: stroke-dashoffset 1s linear;
-}
-
-.quiz-timer__circle--warning .quiz-timer__progress {
-  stroke: var(--warning-color);
+.quiz-timer.critical {
+  border-color: var(--error-500);
+  background: var(--error-50);
   animation: pulse 1s infinite;
 }
 
-.quiz-timer__circle--danger .quiz-timer__progress {
-  stroke: var(--danger-color);
-  animation: pulse 0.5s infinite;
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
 }
 
-.quiz-timer__content {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+.timer-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.timer-icon {
+  font-size: var(--text-xl);
+}
+
+.timer-text {
   text-align: center;
 }
 
-.quiz-timer__time {
-  font-size: 1.5rem;
+.time-display {
+  font-size: var(--text-xl);
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--gray-900);
   line-height: 1;
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--space-1);
 }
 
-.quiz-timer__label {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  font-weight: 600;
+.time-label {
+  font-size: var(--text-xs);
+  color: var(--gray-600);
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.quiz-timer__warning {
-  background-color: rgba(248, 150, 30, 0.1);
-  color: var(--warning-color);
-  padding: 0.75rem 1rem;
-  border-radius: var(--border-radius);
-  border: 1px solid var(--warning-color);
-  font-weight: 600;
-  text-align: center;
-  animation: pulse 1s infinite;
+.timer-progress {
+  width: 100%;
+  height: 4px;
+  background: var(--gray-200);
+  border-radius: 2px;
+  overflow: hidden;
 }
 
-.quiz-timer__time-up {
-  background-color: rgba(239, 68, 68, 0.1);
-  color: var(--danger-color);
-  padding: 0.75rem 1rem;
-  border-radius: var(--border-radius);
-  border: 1px solid var(--danger-color);
-  font-weight: 600;
-  text-align: center;
-  animation: pulse 0.5s infinite;
+.progress-bar {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 1s linear;
 }
 
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
+.quiz-timer.normal .progress-bar {
+  background: var(--primary-500);
 }
 
-@media (max-width: 768px) {
-  .quiz-timer__circle {
-    width: 100px;
-    height: 100px;
-  }
+.quiz-timer.warning .progress-bar {
+  background: var(--warning-500);
+}
 
-  .quiz-timer__time {
-    font-size: 1.25rem;
-  }
+.quiz-timer.critical .progress-bar {
+  background: var(--error-500);
+}
 
-  .quiz-timer__label {
-    font-size: 0.7rem;
+@media (max-width: 640px) {
+  .quiz-timer {
+    min-width: 120px;
+    padding: var(--space-3);
+  }
+  
+  .timer-content {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  
+  .time-display {
+    font-size: var(--text-lg);
   }
 }
 </style>

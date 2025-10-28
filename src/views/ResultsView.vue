@@ -1,384 +1,461 @@
 <template>
-  <div class="results-view-page">
+  <div class="results-view">
     <div class="container">
-      <div class="results-view-page__header">
-        <h1 class="results-view-page__title">Мои результаты</h1>
-        <BaseButton variant="primary" @click="$router.push('/student')">
-          🎯 Новый квиз
-        </BaseButton>
-      </div>
-
-      <div v-if="resultsStore.userResults.length === 0" class="results-view-page__empty">
-        <div class="results-view-page__empty-content">
-          <div class="results-view-page__empty-icon">📊</div>
-          <h2 class="results-view-page__empty-title">Пока нет результатов</h2>
-          <p class="results-view-page__empty-description">
-            Пройдите свой первый квиз, чтобы увидеть здесь статистику
-          </p>
-          <BaseButton variant="primary" @click="$router.push('/student')">
-            🚀 Пройти первый квиз
+      <!-- Single Result View -->
+      <div v-if="currentResult" class="single-result">
+        <div class="result-header">
+          <h1 class="result-title">Quiz Results</h1>
+          <BaseButton @click="$router.push('/quizzes')" variant="primary">
+            Take Another Quiz
           </BaseButton>
         </div>
-      </div>
 
-      <div v-else class="results-view-page__content">
-        <div class="results-view-page__overview">
-          <h2 class="results-view-page__section-title">Общая статистика</h2>
-          <div class="results-view-page__stats">
-            <div class="results-view-page__stat">
-              <div class="results-view-page__stat-icon">📊</div>
-              <div class="results-view-page__stat-info">
-                <div class="results-view-page__stat-value">{{ resultsStore.totalQuizzesTaken }}</div>
-                <div class="results-view-page__stat-label">Пройдено тестов</div>
+        <!-- Score Overview -->
+        <BaseCard class="score-overview">
+          <div class="score-main">
+            <div class="score-circle">
+              <div class="score-value">{{ currentResult.score }}%</div>
+              <div class="score-label">Overall Score</div>
+            </div>
+            <div class="score-details">
+              <div class="detail-item">
+                <div class="detail-value">{{ currentResult.correctAnswers }}</div>
+                <div class="detail-label">Correct Answers</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-value">{{ currentResult.totalQuestions }}</div>
+                <div class="detail-label">Total Questions</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-value">{{ formatTime(currentResult.timeSpent) }}</div>
+                <div class="detail-label">Time Spent</div>
               </div>
             </div>
+          </div>
+          <div class="quiz-info">
+            <h3>{{ currentResult.quizTitle }}</h3>
+            <p>Completed on {{ formatDate(currentResult.submittedAt) }}</p>
+          </div>
+        </BaseCard>
 
-            <div class="results-view-page__stat">
-              <div class="results-view-page__stat-icon">⭐</div>
-              <div class="results-view-page__stat-info">
-                <div class="results-view-page__stat-value">{{ resultsStore.averageScore }}%</div>
-                <div class="results-view-page__stat-label">Средний результат</div>
-              </div>
-            </div>
-
-            <div class="results-view-page__stat">
-              <div class="results-view-page__stat-icon">🎯</div>
-              <div class="results-view-page__stat-info">
-                <div class="results-view-page__stat-value">{{ resultsStore.bestScore }}%</div>
-                <div class="results-view-page__stat-label">Лучший результат</div>
-              </div>
+        <!-- Question Review -->
+        <div class="questions-review">
+          <h2 class="section-title">Question Review</h2>
+          <div class="questions-list">
+            <div
+              v-for="(question, index) in currentResult.questions"
+              :key="index"
+              class="question-review-item"
+            >
+              <QuestionDisplay
+                :question="question"
+                :selectedAnswer="currentResult.userAnswers[index]"
+                :showCorrect="true"
+                :isReview="true"
+              />
             </div>
           </div>
         </div>
+      </div>
 
-        <div class="results-view-page__history">
-          <h2 class="results-view-page__section-title">История результатов</h2>
-          <div class="results-view-page__results-list">
-            <div
-              v-for="result in sortedResults"
-              :key="result.id"
-              class="results-view-page__result-item"
-            >
-              <div class="results-view-page__result-main">
-                <div class="results-view-page__result-date">
-                  {{ formatDate(result.completedAt) }}
-                </div>
-                <div class="results-view-page__result-score">
-                  <span 
-                    class="results-view-page__score-badge"
-                    :class="getScoreClass(result.score)"
-                  >
-                    {{ result.score }}%
-                  </span>
-                </div>
+      <!-- Results List View -->
+      <div v-else>
+        <div class="page-header">
+          <h1 class="page-title">Your Results</h1>
+          <p class="page-subtitle">Track your quiz performance and progress</p>
+        </div>
+
+        <LoadingSpinner v-if="resultsStore.isLoading" class="loading-center" />
+
+        <div v-else-if="resultsStore.userResults.length === 0" class="empty-state">
+          <div class="empty-icon">📊</div>
+          <h3>No Results Yet</h3>
+          <p>Take your first quiz to see your results here!</p>
+          <BaseButton @click="$router.push('/quizzes')" variant="primary">
+            Browse Quizzes
+          </BaseButton>
+        </div>
+
+        <div v-else class="results-list">
+          <BaseCard
+            v-for="result in resultsStore.userResults"
+            :key="result.id"
+            class="result-item"
+            hoverable
+            @click="viewResult(result.id)"
+          >
+            <div class="result-content">
+              <div class="result-main">
+                <h3 class="quiz-name">{{ result.quizTitle }}</h3>
+                <p class="result-date">{{ formatDate(result.submittedAt) }}</p>
               </div>
-
-              <div class="results-view-page__result-details">
-                <div class="results-view-page__result-info">
-                  <span class="results-view-page__info-item">
-                    ✅ {{ result.correctAnswers }}/{{ result.totalQuestions }} правильных
-                  </span>
-                  <span class="results-view-page__info-item">
-                    ⏱️ {{ formatTime(result.timeSpent) }}
-                  </span>
+              <div class="result-stats">
+                <div class="score-badge" :class="getScoreClass(result.score)">
+                  {{ result.score }}%
+                </div>
+                <div class="result-details">
+                  <span>{{ result.correctAnswers }}/{{ result.totalQuestions }} correct</span>
+                  <span class="time-spent">{{ formatTime(result.timeSpent) }}</span>
                 </div>
               </div>
             </div>
-          </div>
+          </BaseCard>
         </div>
       </div>
     </div>
   </div>
 </template>
 
-<script setup>
-import { computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useResultsStore } from '@/stores/results'
-import BaseButton from '@/components/common/BaseButton.vue'
+<script>
+import { ref, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useResultsStore } from '../stores/results'
+import BaseCard from '../components/common/BaseCard.vue'
+import BaseButton from '../components/common/BaseButton.vue'
+import QuestionDisplay from '../components/student/QuestionDisplay.vue'
+import LoadingSpinner from '../components/common/LoadingSpinner.vue'
+import { formatTime } from '../utils/helpers'
 
-const router = useRouter()
-const resultsStore = useResultsStore()
+export default {
+  name: 'ResultsView',
+  components: {
+    BaseCard,
+    BaseButton,
+    QuestionDisplay,
+    LoadingSpinner
+  },
+  setup() {
+    const route = useRoute()
+    const router = useRouter()
+    const resultsStore = useResultsStore()
 
-const sortedResults = computed(() => {
-  return [...resultsStore.userResults].sort((a, b) => 
-    new Date(b.completedAt) - new Date(a.completedAt)
-  )
-})
+    const resultId = route.params.id ? parseInt(route.params.id) : null
 
-const getScoreClass = (score) => {
-  if (score >= 80) return 'results-view-page__score-badge--excellent'
-  if (score >= 60) return 'results-view-page__score-badge--good'
-  if (score >= 40) return 'results-view-page__score-badge--average'
-  return 'results-view-page__score-badge--poor'
+    const currentResult = computed(() => {
+      if (resultId) {
+        return resultsStore.results.find(r => r.id === resultId) || resultsStore.currentResult
+      }
+      return null
+    })
+
+    const formatDate = (dateString) => {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    }
+
+    const getScoreClass = (score) => {
+      if (score >= 80) return 'excellent'
+      if (score >= 60) return 'good'
+      if (score >= 40) return 'average'
+      return 'poor'
+    }
+
+    const viewResult = (id) => {
+      router.push(`/results/${id}`)
+    }
+
+    onMounted(async () => {
+      await resultsStore.loadResults()
+    })
+
+    return {
+      resultsStore,
+      currentResult,
+      formatDate,
+      formatTime,
+      getScoreClass,
+      viewResult
+    }
+  }
 }
-
-const formatDate = (timestamp) => {
-  return new Date(timestamp).toLocaleDateString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
-const formatTime = (seconds) => {
-  if (!seconds) return '--:--'
-  const mins = Math.floor(seconds / 60)
-  const secs = seconds % 60
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-}
-
-onMounted(async () => {
-  await resultsStore.loadResults()
-})
 </script>
 
 <style scoped>
-.results-view-page {
-  padding: 2rem 0;
-  min-height: calc(100vh - 200px);
+.results-view {
+  padding-bottom: var(--space-8);
 }
 
-.results-view-page__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 3rem;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.results-view-page__title {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: 2.5rem;
-  font-weight: 700;
-}
-
-.results-view-page__empty {
-  text-align: center;
-  padding: 4rem 2rem;
-}
-
-.results-view-page__empty-content {
-  max-width: 400px;
+.single-result {
+  max-width: 800px;
   margin: 0 auto;
 }
 
-.results-view-page__empty-icon {
-  font-size: 4rem;
-  margin-bottom: 1.5rem;
-}
-
-.results-view-page__empty-title {
-  margin: 0 0 1rem 0;
-  color: var(--text-primary);
-  font-size: 1.5rem;
-  font-weight: 600;
-}
-
-.results-view-page__empty-description {
-  margin: 0 0 2rem 0;
-  color: var(--text-secondary);
-  line-height: 1.6;
-}
-
-.results-view-page__content {
-  display: flex;
-  flex-direction: column;
-  gap: 3rem;
-}
-
-.results-view-page__section-title {
-  margin-bottom: 1.5rem;
-  color: var(--text-primary);
-  font-size: 1.5rem;
-  border-bottom: 2px solid var(--primary-color);
-  padding-bottom: 0.5rem;
-}
-
-.results-view-page__overview {
-  background: var(--bg-secondary);
-  padding: 2rem;
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow);
-}
-
-.results-view-page__stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1.5rem;
-}
-
-.results-view-page__stat {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  background: var(--bg-primary);
-  padding: 1.5rem;
-  border-radius: var(--border-radius);
-  border-left: 4px solid var(--primary-color);
-}
-
-.results-view-page__stat-icon {
-  font-size: 2rem;
-}
-
-.results-view-page__stat-info {
-  flex: 1;
-}
-
-.results-view-page__stat-value {
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--primary-color);
-  line-height: 1;
-  margin-bottom: 0.25rem;
-}
-
-.results-view-page__stat-label {
-  color: var(--text-secondary);
-  font-size: 0.875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.results-view-page__history {
-  background: var(--bg-secondary);
-  padding: 2rem;
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow);
-}
-
-.results-view-page__results-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.results-view-page__result-item {
-  background: var(--bg-primary);
-  border-radius: var(--border-radius);
-  overflow: hidden;
-  box-shadow: var(--shadow);
-  border: 1px solid #e2e8f0;
-}
-
-.results-view-page__result-main {
+.result-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem;
+  margin-bottom: var(--space-8);
 }
 
-.results-view-page__result-date {
-  font-weight: 600;
-  color: var(--text-primary);
-  font-size: 1.125rem;
-}
-
-.results-view-page__score-badge {
-  padding: 0.5rem 1rem;
-  border-radius: 1rem;
+.result-title {
+  font-size: var(--text-3xl);
   font-weight: 700;
-  color: white;
-  font-size: 1.125rem;
-  min-width: 80px;
+  color: var(--gray-900);
+  margin: 0;
+}
+
+.score-overview {
+  margin-bottom: var(--space-8);
+}
+
+.score-main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  margin-bottom: var(--space-6);
+}
+
+.score-circle {
   text-align: center;
-  display: inline-block;
+  flex-shrink: 0;
 }
 
-.results-view-page__score-badge--excellent {
-  background-color: #10b981;
+.score-value {
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--primary-600);
+  line-height: 1;
+  margin-bottom: var(--space-2);
 }
 
-.results-view-page__score-badge--good {
-  background-color: #3b82f6;
-}
-
-.results-view-page__score-badge--average {
-  background-color: #f59e0b;
-}
-
-.results-view-page__score-badge--poor {
-  background-color: #ef4444;
-}
-
-.results-view-page__result-details {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 1.5rem;
-  background-color: rgba(0, 0, 0, 0.02);
-  border-top: 1px solid #e2e8f0;
-}
-
-.results-view-page__result-info {
-  display: flex;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-}
-
-.results-view-page__info-item {
-  color: var(--text-secondary);
-  font-size: 0.875rem;
+.score-label {
+  color: var(--gray-600);
   font-weight: 500;
 }
 
+.score-details {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-6);
+  flex: 1;
+}
+
+.detail-item {
+  text-align: center;
+  padding: var(--space-4);
+  background: var(--gray-50);
+  border-radius: var(--radius);
+}
+
+.detail-value {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: var(--space-1);
+}
+
+.detail-label {
+  color: var(--gray-600);
+  font-size: var(--text-sm);
+}
+
+.quiz-info {
+  text-align: center;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--gray-200);
+}
+
+.quiz-info h3 {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--gray-900);
+  margin-bottom: var(--space-1);
+}
+
+.quiz-info p {
+  color: var(--gray-600);
+  margin: 0;
+}
+
+.section-title {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--gray-900);
+  margin-bottom: var(--space-6);
+}
+
+.questions-review {
+  margin-bottom: var(--space-8);
+}
+
+.questions-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.question-review-item {
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.page-header {
+  text-align: center;
+  margin-bottom: var(--space-8);
+}
+
+.page-title {
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: var(--space-2);
+}
+
+.page-subtitle {
+  font-size: var(--text-lg);
+  color: var(--gray-600);
+  margin: 0;
+}
+
+.loading-center {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-12);
+}
+
+.empty-state {
+  text-align: center;
+  padding: var(--space-12);
+  background: white;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.empty-icon {
+  font-size: 4rem;
+  margin-bottom: var(--space-4);
+}
+
+.empty-state h3 {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--gray-900);
+  margin-bottom: var(--space-2);
+}
+
+.empty-state p {
+  color: var(--gray-600);
+  margin-bottom: var(--space-6);
+}
+
+.results-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.result-item {
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.result-item:hover {
+  transform: translateY(-2px);
+}
+
+.result-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.result-main {
+  flex: 1;
+}
+
+.quiz-name {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--gray-900);
+  margin-bottom: var(--space-1);
+}
+
+.result-date {
+  color: var(--gray-600);
+  font-size: var(--text-sm);
+  margin: 0;
+}
+
+.result-stats {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.score-badge {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius);
+  font-weight: 600;
+  color: white;
+  min-width: 60px;
+  text-align: center;
+}
+
+.score-badge.excellent {
+  background: var(--success-500);
+}
+
+.score-badge.good {
+  background: var(--primary-500);
+}
+
+.score-badge.average {
+  background: var(--warning-500);
+}
+
+.score-badge.poor {
+  background: var(--error-500);
+}
+
+.result-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+  color: var(--gray-600);
+  font-size: var(--text-sm);
+}
+
+.time-spent {
+  font-size: var(--text-xs);
+  color: var(--gray-500);
+}
+
 @media (max-width: 768px) {
-  .results-view-page {
-    padding: 1rem 0;
-  }
-
-  .results-view-page__header {
+  .result-header {
     flex-direction: column;
-    align-items: stretch;
+    gap: var(--space-4);
     text-align: center;
-    margin-bottom: 2rem;
   }
-
-  .results-view-page__title {
-    font-size: 2rem;
+  
+  .score-main {
+    flex-direction: column;
+    text-align: center;
   }
-
-  .results-view-page__overview,
-  .results-view-page__history {
-    padding: 1.5rem;
-  }
-
-  .results-view-page__stats {
+  
+  .score-details {
     grid-template-columns: 1fr;
-    gap: 1rem;
+    gap: var(--space-4);
   }
-
-  .results-view-page__stat {
-    padding: 1.25rem;
-  }
-
-  .results-view-page__stat-value {
-    font-size: 1.75rem;
-  }
-
-  .results-view-page__result-main {
+  
+  .result-content {
     flex-direction: column;
-    gap: 1rem;
-    align-items: stretch;
-    text-align: center;
+    align-items: flex-start;
+    text-align: left;
   }
-
-  .results-view-page__result-details {
-    flex-direction: column;
-    gap: 1rem;
-    align-items: stretch;
-  }
-
-  .results-view-page__result-info {
-    flex-direction: column;
-    gap: 0.5rem;
-    align-items: center;
+  
+  .result-stats {
+    width: 100%;
+    justify-content: space-between;
   }
 }
 </style>

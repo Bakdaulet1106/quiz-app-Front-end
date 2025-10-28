@@ -1,18 +1,37 @@
 export const validateEmail = (email) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  if (!email) return 'Email обязателен'
-  if (!emailRegex.test(email)) return 'Введите корректный email'
-  return ''
+  return emailRegex.test(email)
 }
 
 export const validatePassword = (password) => {
-  if (!password) return 'Пароль обязателен'
-  if (password.length < 6) return 'Пароль должен содержать минимум 6 символов'
-  return ''
+  return password.length >= 6
 }
 
-export const validateName = (name) => {
-  if (!name) return 'Имя обязательно'
-  if (name.length < 2) return 'Имя должно содержать минимум 2 символа'
-  return ''
+export const validateQuestion = (question) => {
+  const errors = {}
+  
+  if (!question.question?.trim()) {
+    errors.question = 'Question text is required'
+  }
+  
+  if (!question.options || question.options.length < 2) {
+    errors.options = 'At least 2 options are required'
+  }
+  
+  if (question.options.some(opt => !opt.trim())) {
+    errors.options = 'All options must have text'
+  }
+  
+  if (question.correctAnswer === undefined || question.correctAnswer === null) {
+    errors.correctAnswer = 'Correct answer must be selected'
+  }
+  
+  if (!question.category?.trim()) {
+    errors.category = 'Category is required'
+  }
+  
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors
+  }
 }

@@ -1,342 +1,437 @@
 <template>
   <div class="dashboard-view">
     <div class="container">
-      <div class="dashboard-view__welcome">
-        <h1 class="dashboard-view__title">
-          Добро пожаловать, {{ authStore.userName }}! 👋
-        </h1>
-        <p class="dashboard-view__subtitle">
-          {{ welcomeMessage }}
-        </p>
-      </div>
-
-      <div class="dashboard-view__quick-actions">
-        <h2 class="dashboard-view__section-title">Быстрые действия</h2>
-        <div class="dashboard-view__actions-grid">
-          <router-link 
-            v-if="authStore.isStudent"
-            to="/student" 
-            class="dashboard-view__action-card"
-          >
-            <div class="dashboard-view__action-icon">🎓</div>
-            <h3 class="dashboard-view__action-title">Пройти квиз</h3>
-            <p class="dashboard-view__action-description">
-              Начните новый тест и проверьте свои знания
-            </p>
-          </router-link>
-
-          <router-link 
-            v-if="authStore.isAdmin"
-            to="/admin" 
-            class="dashboard-view__action-card"
-          >
-            <div class="dashboard-view__action-icon">⚙️</div>
-            <h3 class="dashboard-view__action-title">Управление вопросами</h3>
-            <p class="dashboard-view__action-description">
-              Добавляйте и редактируйте вопросы в банке
-            </p>
-          </router-link>
-
-          <router-link 
-            to="/results" 
-            class="dashboard-view__action-card"
-          >
-            <div class="dashboard-view__action-icon">📊</div>
-            <h3 class="dashboard-view__action-title">Мои результаты</h3>
-            <p class="dashboard-view__action-description">
-              Просмотрите историю пройденных тестов
-            </p>
-          </router-link>
+      <!-- Welcome Section -->
+      <section class="welcome-section">
+        <div class="welcome-content">
+          <h1 class="welcome-title">
+            Welcome back, {{ authStore.userName }}!
+          </h1>
+          <p class="welcome-subtitle">
+            {{ dashboardMessage }}
+          </p>
         </div>
-      </div>
-
-      <div 
-        v-if="authStore.isStudent && recentResults.length > 0"
-        class="dashboard-view__recent-results"
-      >
-        <h2 class="dashboard-view__section-title">Последние результаты</h2>
-        <div class="dashboard-view__results-grid">
-          <div
-            v-for="result in recentResults"
-            :key="result.id"
-            class="dashboard-view__result-card"
-          >
-            <div class="dashboard-view__result-header">
-              <h3 class="dashboard-view__result-title">Тест {{ formatDate(result.completedAt) }}</h3>
-              <span 
-                class="dashboard-view__result-score"
-                :class="getScoreClass(result.score)"
-              >
-                {{ result.score }}%
-              </span>
-            </div>
-            <div class="dashboard-view__result-details">
-              <span>{{ result.correctAnswers }}/{{ result.totalQuestions }} правильных</span>
-            </div>
+        <div class="welcome-stats" v-if="authStore.isStudent">
+          <div class="stat-card">
+            <div class="stat-value">{{ completedQuizzes }}</div>
+            <div class="stat-label">Quizzes Completed</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">{{ averageScore }}%</div>
+            <div class="stat-label">Average Score</div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div 
-        v-if="authStore.isStudent && recentResults.length === 0"
-        class="dashboard-view__no-results"
-      >
-        <div class="dashboard-view__no-results-content">
-          <div class="dashboard-view__no-results-icon">📝</div>
-          <h3 class="dashboard-view__no-results-title">Пока нет результатов</h3>
-          <p class="dashboard-view__no-results-description">
-            Пройдите свой первый тест, чтобы увидеть здесь статистику
-          </p>
-          <BaseButton 
-            variant="primary" 
-            @click="$router.push('/student')"
-          >
-            🚀 Начать первый квиз
-          </BaseButton>
+      <!-- Quick Actions -->
+      <section class="actions-section">
+        <h2 class="section-title">Quick Actions</h2>
+        <div class="actions-grid">
+          <router-link to="/quizzes" class="action-card">
+            <div class="action-icon">📝</div>
+            <h3>Take a Quiz</h3>
+            <p>Test your knowledge with our quiz collection</p>
+          </router-link>
+          
+          <router-link to="/results" class="action-card" v-if="authStore.isStudent">
+            <div class="action-icon">📊</div>
+            <h3>View Results</h3>
+            <p>Check your previous quiz performances</p>
+          </router-link>
+          
+          <router-link to="/admin" class="action-card" v-if="authStore.isAdmin">
+            <div class="action-icon">⚙️</div>
+            <h3>Admin Panel</h3>
+            <p>Manage quizzes and questions</p>
+          </router-link>
+          
+          <div class="action-card" v-if="authStore.isStudent">
+            <div class="action-icon">🎯</div>
+            <h3>Your Progress</h3>
+            <p>Continue your learning journey</p>
+          </div>
         </div>
-      </div>
+      </section>
+
+      <!-- Recent Activity -->
+      <section class="activity-section" v-if="authStore.isStudent && recentResults.length > 0">
+        <h2 class="section-title">Recent Activity</h2>
+        <BaseCard>
+          <div class="activity-list">
+            <div v-for="result in recentResults" :key="result.id" class="activity-item">
+              <div class="activity-info">
+                <h4 class="quiz-title">{{ result.quizTitle }}</h4>
+                <p class="activity-date">{{ formatDate(result.submittedAt) }}</p>
+              </div>
+              <div class="activity-score">
+                <span class="score-value">{{ result.score }}%</span>
+                <div class="score-bar">
+                  <div 
+                    class="score-progress" 
+                    :style="{ width: result.score + '%' }"
+                    :class="getScoreClass(result.score)"
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </BaseCard>
+      </section>
+
+      <!-- Admin Quick Stats -->
+      <section class="admin-section" v-if="authStore.isAdmin">
+        <h2 class="section-title">Admin Overview</h2>
+        <div class="stats-grid">
+          <BaseCard class="stat-item">
+            <div class="stat-content">
+              <div class="stat-number">{{ totalQuizzes }}</div>
+              <div class="stat-description">Total Quizzes</div>
+            </div>
+          </BaseCard>
+          <BaseCard class="stat-item">
+            <div class="stat-content">
+              <div class="stat-number">{{ totalQuestions }}</div>
+              <div class="stat-description">Questions in Bank</div>
+            </div>
+          </BaseCard>
+          <BaseCard class="stat-item">
+            <div class="stat-content">
+              <div class="stat-number">{{ totalResults }}</div>
+              <div class="stat-description">Quiz Attempts</div>
+            </div>
+          </BaseCard>
+        </div>
+      </section>
     </div>
   </div>
 </template>
 
-<script setup>
+<script>
 import { computed, onMounted } from 'vue'
-import { useAuthStore } from '@/stores/auth'
-import { useResultsStore } from '@/stores/results'
-import BaseButton from '@/components/common/BaseButton.vue'
+import { useAuthStore } from '../stores/auth'
+import { useResultsStore } from '../stores/results'
+import { useQuizStore } from '../stores/quizzes'
+import { useQuestionStore } from '../stores/questions'
+import BaseCard from '../components/common/BaseCard.vue'
 
-const authStore = useAuthStore()
-const resultsStore = useResultsStore()
+export default {
+  name: 'DashboardView',
+  components: {
+    BaseCard
+  },
+  setup() {
+    const authStore = useAuthStore()
+    const resultsStore = useResultsStore()
+    const quizStore = useQuizStore()
+    const questionStore = useQuestionStore()
 
-const welcomeMessage = computed(() => {
-  const hour = new Date().getHours()
-  if (hour < 12) return 'Хорошего утра! Готовы проверить свои знания?'
-  if (hour < 18) return 'Прекрасного дня! Время для нового вызова!'
-  return 'Прекрасного вечера! Идеальное время для обучения!'
-})
+    const dashboardMessage = computed(() => {
+      if (authStore.isAdmin) {
+        return 'Manage your quiz platform and track student progress.'
+      } else {
+        return 'Continue your learning journey and track your progress.'
+      }
+    })
 
-const recentResults = computed(() => {
-  return resultsStore.recentResults.slice(0, 3)
-})
+    const completedQuizzes = computed(() => {
+      return resultsStore.userResults.length
+    })
 
-const getScoreClass = (score) => {
-  if (score >= 80) return 'dashboard-view__result-score--excellent'
-  if (score >= 60) return 'dashboard-view__result-score--good'
-  if (score >= 40) return 'dashboard-view__result-score--average'
-  return 'dashboard-view__result-score--poor'
+    const averageScore = computed(() => {
+      return resultsStore.averageScore
+    })
+
+    const recentResults = computed(() => {
+      return resultsStore.userResults.slice(0, 3)
+    })
+
+    const totalQuizzes = computed(() => {
+      return quizStore.quizzes.length
+    })
+
+    const totalQuestions = computed(() => {
+      return questionStore.questions.length
+    })
+
+    const totalResults = computed(() => {
+      return resultsStore.results.length
+    })
+
+    const formatDate = (dateString) => {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      })
+    }
+
+    const getScoreClass = (score) => {
+      if (score >= 80) return 'excellent'
+      if (score >= 60) return 'good'
+      if (score >= 40) return 'average'
+      return 'poor'
+    }
+
+    onMounted(async () => {
+      if (authStore.isStudent) {
+        await resultsStore.loadResults()
+      }
+      if (authStore.isAdmin) {
+        await quizStore.loadQuizzes()
+        await questionStore.loadQuestions()
+        await resultsStore.loadResults()
+      }
+    })
+
+    return {
+      authStore,
+      dashboardMessage,
+      completedQuizzes,
+      averageScore,
+      recentResults,
+      totalQuizzes,
+      totalQuestions,
+      totalResults,
+      formatDate,
+      getScoreClass
+    }
+  }
 }
-
-const formatDate = (timestamp) => {
-  return new Date(timestamp).toLocaleDateString('ru-RU')
-}
-
-onMounted(async () => {
-  await resultsStore.loadResults()
-})
 </script>
 
 <style scoped>
 .dashboard-view {
-  padding: 2rem 0;
-  min-height: calc(100vh - 200px);
+  padding-bottom: var(--space-8);
 }
 
-.dashboard-view__welcome {
-  text-align: center;
-  margin-bottom: 3rem;
-  padding: 2rem;
-  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-  border-radius: var(--border-radius-lg);
-  color: white;
+.welcome-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-8);
+  gap: var(--space-8);
 }
 
-.dashboard-view__title {
-  margin: 0 0 1rem 0;
-  font-size: 2.5rem;
+.welcome-content {
+  flex: 1;
+}
+
+.welcome-title {
+  font-size: var(--text-3xl);
   font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: var(--space-2);
 }
 
-.dashboard-view__subtitle {
+.welcome-subtitle {
+  font-size: var(--text-lg);
+  color: var(--gray-600);
   margin: 0;
-  font-size: 1.25rem;
-  opacity: 0.9;
 }
 
-.dashboard-view__section-title {
-  margin-bottom: 1.5rem;
-  color: var(--text-primary);
-  font-size: 1.5rem;
-  border-bottom: 2px solid var(--primary-color);
-  padding-bottom: 0.5rem;
+.welcome-stats {
+  display: flex;
+  gap: var(--space-6);
 }
 
-.dashboard-view__quick-actions {
-  margin-bottom: 3rem;
+.stat-card {
+  background: white;
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  text-align: center;
+  min-width: 120px;
 }
 
-.dashboard-view__actions-grid {
+.stat-value {
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  color: var(--primary-600);
+  margin-bottom: var(--space-1);
+}
+
+.stat-label {
+  font-size: var(--text-sm);
+  color: var(--gray-600);
+  font-weight: 500;
+}
+
+.section-title {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--gray-900);
+  margin-bottom: var(--space-6);
+}
+
+.actions-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.5rem;
+  gap: var(--space-6);
+  margin-bottom: var(--space-8);
 }
 
-.dashboard-view__action-card {
-  background: var(--bg-secondary);
-  padding: 2rem;
-  border-radius: var(--border-radius-lg);
+.action-card {
+  background: white;
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
   text-decoration: none;
   color: inherit;
   transition: var(--transition);
-  border: 2px solid transparent;
-  cursor: pointer;
-  display: block;
+  border: 1px solid var(--gray-200);
 }
 
-.dashboard-view__action-card:hover {
-  transform: translateY(-4px);
+.action-card:hover {
   box-shadow: var(--shadow-lg);
-  border-color: var(--primary-color);
+  transform: translateY(-2px);
+  border-color: var(--primary-300);
 }
 
-.dashboard-view__action-icon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
+.action-icon {
+  font-size: var(--text-2xl);
+  margin-bottom: var(--space-3);
 }
 
-.dashboard-view__action-title {
-  margin: 0 0 1rem 0;
-  color: var(--text-primary);
-  font-size: 1.25rem;
+.action-card h3 {
+  font-size: var(--text-lg);
   font-weight: 600;
+  color: var(--gray-900);
+  margin-bottom: var(--space-2);
 }
 
-.dashboard-view__action-description {
+.action-card p {
+  color: var(--gray-600);
   margin: 0;
-  color: var(--text-secondary);
-  line-height: 1.6;
+  line-height: 1.5;
 }
 
-.dashboard-view__recent-results {
-  margin-bottom: 3rem;
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 
-.dashboard-view__results-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
-}
-
-.dashboard-view__result-card {
-  background: var(--bg-secondary);
-  padding: 1.5rem;
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow);
-  border-left: 4px solid var(--primary-color);
-}
-
-.dashboard-view__result-header {
+.activity-item {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 1rem;
+  align-items: center;
+  padding: var(--space-4);
+  border-radius: var(--radius);
+  transition: var(--transition);
 }
 
-.dashboard-view__result-title {
+.activity-item:hover {
+  background: var(--gray-50);
+}
+
+.activity-info {
+  flex: 1;
+}
+
+.quiz-title {
+  font-weight: 600;
+  color: var(--gray-900);
+  margin-bottom: var(--space-1);
+}
+
+.activity-date {
+  color: var(--gray-500);
+  font-size: var(--text-sm);
   margin: 0;
-  color: var(--text-primary);
-  font-size: 1.125rem;
+}
+
+.activity-score {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.score-value {
   font-weight: 600;
+  color: var(--gray-700);
+  min-width: 50px;
+  text-align: right;
 }
 
-.dashboard-view__result-score {
-  padding: 0.25rem 0.75rem;
-  border-radius: 1rem;
-  font-weight: 700;
-  font-size: 0.875rem;
-  color: white;
+.score-bar {
+  width: 80px;
+  height: 6px;
+  background: var(--gray-200);
+  border-radius: 3px;
+  overflow: hidden;
 }
 
-.dashboard-view__result-score--excellent {
-  background-color: #10b981;
+.score-progress {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
 }
 
-.dashboard-view__result-score--good {
-  background-color: #3b82f6;
+.score-progress.excellent {
+  background: var(--success-500);
 }
 
-.dashboard-view__result-score--average {
-  background-color: #f59e0b;
+.score-progress.good {
+  background: var(--primary-500);
 }
 
-.dashboard-view__result-score--poor {
-  background-color: #ef4444;
+.score-progress.average {
+  background: var(--warning-500);
 }
 
-.dashboard-view__result-details {
-  color: var(--text-secondary);
-  font-size: 0.875rem;
+.score-progress.poor {
+  background: var(--error-500);
 }
 
-.dashboard-view__no-results {
+.admin-section {
+  margin-top: var(--space-8);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-6);
+}
+
+.stat-item {
   text-align: center;
-  padding: 4rem 2rem;
-  background: var(--bg-secondary);
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow);
 }
 
-.dashboard-view__no-results-content {
-  max-width: 400px;
-  margin: 0 auto;
+.stat-content {
+  padding: var(--space-6);
 }
 
-.dashboard-view__no-results-icon {
-  font-size: 4rem;
-  margin-bottom: 1.5rem;
+.stat-number {
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  color: var(--primary-600);
+  margin-bottom: var(--space-2);
 }
 
-.dashboard-view__no-results-title {
-  margin: 0 0 1rem 0;
-  color: var(--text-primary);
-  font-size: 1.5rem;
-  font-weight: 600;
-}
-
-.dashboard-view__no-results-description {
-  margin: 0 0 2rem 0;
-  color: var(--text-secondary);
-  line-height: 1.6;
+.stat-description {
+  color: var(--gray-600);
+  font-weight: 500;
 }
 
 @media (max-width: 768px) {
-  .dashboard-view {
-    padding: 1rem 0;
+  .welcome-section {
+    flex-direction: column;
+    text-align: center;
   }
-
-  .dashboard-view__welcome {
-    padding: 1.5rem;
-    margin-bottom: 2rem;
+  
+  .welcome-stats {
+    justify-content: center;
   }
-
-  .dashboard-view__title {
-    font-size: 2rem;
+  
+  .activity-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
   }
-
-  .dashboard-view__subtitle {
-    font-size: 1.125rem;
-  }
-
-  .dashboard-view__actions-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .dashboard-view__action-card {
-    padding: 1.5rem;
-  }
-
-  .dashboard-view__results-grid {
-    grid-template-columns: 1fr;
+  
+  .activity-score {
+    width: 100%;
+    justify-content: space-between;
   }
 }
 </style>

@@ -1,468 +1,452 @@
 <template>
-  <div class="question-form">
-    <h2 class="question-form__title">
-      {{ isEditing ? 'Редактировать вопрос' : 'Добавить вопрос' }}
-    </h2>
-
-    <form @submit.prevent="handleSubmit" class="question-form__form">
-      <div class="question-form__field">
-        <label for="question" class="question-form__label">Вопрос *</label>
+  <form @submit.prevent="handleSubmit" class="question-form">
+    <div class="form-section">
+      <h3>Question Details</h3>
+      
+      <div class="form-group">
+        <label for="question-text" class="form-label">Question Text *</label>
         <textarea
-          id="question"
+          id="question-text"
           v-model="form.question"
-          class="question-form__textarea"
-          :class="{ 'question-form__textarea--error': errors.question }"
-          placeholder="Введите текст вопроса"
+          class="form-textarea"
+          :class="{ error: errors.question }"
+          placeholder="Enter your question here..."
           rows="3"
+          required
         ></textarea>
-        <span v-if="errors.question" class="question-form__error">{{ errors.question }}</span>
+        <div v-if="errors.question" class="error-message">{{ errors.question }}</div>
       </div>
 
-      <div class="question-form__row">
-        <div class="question-form__field">
-          <label for="category" class="question-form__label">Категория *</label>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="category" class="form-label">Category *</label>
           <select
             id="category"
             v-model="form.category"
-            class="question-form__select"
-            :class="{ 'question-form__select--error': errors.category }"
+            class="form-select"
+            :class="{ error: errors.category }"
+            required
           >
-            <option value="">Выберите категорию</option>
-            <option v-for="category in CATEGORIES" :key="category" :value="category">
-              {{ category }}
-            </option>
+            <option value="">Select Category</option>
+            <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
           </select>
-          <span v-if="errors.category" class="question-form__error">{{ errors.category }}</span>
+          <div v-if="errors.category" class="error-message">{{ errors.category }}</div>
         </div>
 
-        <div class="question-form__field">
-          <label for="difficulty" class="question-form__label">Сложность *</label>
+        <div class="form-group">
+          <label for="difficulty" class="form-label">Difficulty *</label>
           <select
             id="difficulty"
             v-model="form.difficulty"
-            class="question-form__select"
-            :class="{ 'question-form__select--error': errors.difficulty }"
+            class="form-select"
+            :class="{ error: errors.difficulty }"
+            required
           >
-            <option value="">Выберите сложность</option>
-            <option value="easy">Легкий</option>
-            <option value="medium">Средний</option>
-            <option value="hard">Сложный</option>
+            <option value="">Select Difficulty</option>
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
           </select>
-          <span v-if="errors.difficulty" class="question-form__error">{{ errors.difficulty }}</span>
-        </div>
-
-        <div class="question-form__field">
-          <label for="points" class="question-form__label">Баллы *</label>
-          <input
-            id="points"
-            v-model.number="form.points"
-            type="number"
-            min="1"
-            max="100"
-            class="question-form__input"
-            :class="{ 'question-form__input--error': errors.points }"
-            placeholder="10"
-          />
-          <span v-if="errors.points" class="question-form__error">{{ errors.points }}</span>
+          <div v-if="errors.difficulty" class="error-message">{{ errors.difficulty }}</div>
         </div>
       </div>
 
-      <div class="question-form__options">
-        <h3 class="question-form__options-title">Варианты ответов *</h3>
-        
-        <div 
-          v-for="(option, index) in form.options" 
+      <div class="form-group">
+        <label for="explanation" class="form-label">Explanation (Optional)</label>
+        <textarea
+          id="explanation"
+          v-model="form.explanation"
+          class="form-textarea"
+          placeholder="Provide an explanation for the correct answer..."
+          rows="2"
+        ></textarea>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3>Answer Options</h3>
+      
+      <div class="options-list">
+        <div
+          v-for="(option, index) in form.options"
           :key="index"
-          class="question-form__option"
+          class="option-row"
         >
-          <div class="question-form__option-content">
-            <span class="question-form__option-letter">{{ String.fromCharCode(65 + index) }}</span>
+          <div class="option-input-group">
+            <div class="option-marker">{{ String.fromCharCode(65 + index) }}</div>
             <input
               v-model="form.options[index]"
               type="text"
-              class="question-form__option-input"
-              :placeholder="`Вариант ${String.fromCharCode(65 + index)}`"
+              class="form-input"
+              :class="{ error: errors.options && errors.options[index] }"
+              :placeholder="`Option ${String.fromCharCode(65 + index)}`"
+              required
             />
-            <BaseButton
-              v-if="form.options.length > 2"
-              variant="danger"
-              size="small"
+            <button
+              type="button"
               @click="removeOption(index)"
-              class="question-form__remove-option"
+              class="remove-option-btn"
+              :disabled="form.options.length <= 2"
             >
-              ✕
-            </BaseButton>
+              &times;
+            </button>
+          </div>
+          <div v-if="errors.options && errors.options[index]" class="error-message">
+            {{ errors.options[index] }}
           </div>
         </div>
-
-        <BaseButton
-          v-if="form.options.length < 6"
-          variant="secondary"
-          size="small"
-          @click="addOption"
-          class="question-form__add-option"
-        >
-          ➕ Добавить вариант
-        </BaseButton>
       </div>
 
-      <div class="question-form__field">
-        <label class="question-form__label">Правильный ответ *</label>
-        <div class="question-form__correct-answers">
-          <div
-            v-for="(option, index) in form.options"
-            :key="index"
-            class="question-form__correct-answer"
-            :class="{
-              'question-form__correct-answer--selected': form.correctAnswer === index
-            }"
-            @click="form.correctAnswer = index"
-          >
-            <span class="question-form__correct-letter">{{ String.fromCharCode(65 + index) }}</span>
-            <span class="question-form__correct-text">{{ option || `Вариант ${String.fromCharCode(65 + index)}` }}</span>
-            <span 
-              v-if="form.correctAnswer === index" 
-              class="question-form__correct-check"
-            >
-              ✓
-            </span>
-          </div>
+      <BaseButton
+        type="button"
+        @click="addOption"
+        variant="outline"
+        size="small"
+        :disabled="form.options.length >= 6"
+      >
+        + Add Option
+      </BaseButton>
+    </div>
+
+    <div class="form-section">
+      <h3>Correct Answer</h3>
+      
+      <div class="correct-answer-selector">
+        <div
+          v-for="(option, index) in form.options"
+          :key="index"
+          @click="form.correctAnswer = index"
+          :class="[
+            'answer-option',
+            { selected: form.correctAnswer === index }
+          ]"
+        >
+          <div class="option-marker">{{ String.fromCharCode(65 + index) }}</div>
+          <div class="option-text">{{ option || `Option ${String.fromCharCode(65 + index)}` }}</div>
         </div>
-        <span v-if="errors.correctAnswer" class="question-form__error">{{ errors.correctAnswer }}</span>
       </div>
+      <div v-if="errors.correctAnswer" class="error-message">{{ errors.correctAnswer }}</div>
+    </div>
 
-      <div class="question-form__actions">
-        <BaseButton
-          type="button"
-          variant="secondary"
-          @click="$emit('cancel')"
-        >
-          Отмена
-        </BaseButton>
-        <BaseButton
-          type="submit"
-          variant="primary"
-          :disabled="!isFormValid"
-        >
-          {{ isEditing ? 'Обновить' : 'Создать' }}
-        </BaseButton>
-      </div>
-    </form>
-  </div>
+    <div class="form-actions">
+      <BaseButton
+        type="button"
+        @click="$emit('cancel')"
+        variant="outline"
+      >
+        Cancel
+      </BaseButton>
+      <BaseButton
+        type="submit"
+        variant="primary"
+        :isLoading="questionStore.isLoading"
+      >
+        {{ editingQuestion ? 'Update Question' : 'Create Question' }}
+      </BaseButton>
+    </div>
+  </form>
 </template>
 
-<script setup>
-import { ref, computed, watch } from 'vue'
-import { useQuestionsStore } from '@/stores/questions'
-import { CATEGORIES } from '@/utils/constants'
-import BaseButton from '@/components/common/BaseButton.vue'
+<script>
+import { reactive, onMounted } from 'vue'
+import { useQuestionStore } from '../../stores/questions'
+import { QUIZ_CATEGORIES } from '../../utils/constants'
+import { validateQuestion } from '../../utils/validators'
+import BaseButton from '../common/BaseButton.vue'
 
-const props = defineProps({
-  question: {
-    type: Object,
-    default: null
-  }
-})
+export default {
+  name: 'QuestionForm',
+  components: {
+    BaseButton
+  },
+  props: {
+    question: {
+      type: Object,
+      default: null
+    }
+  },
+  emits: ['saved', 'cancel'],
+  setup(props, { emit }) {
+    const questionStore = useQuestionStore()
 
-const emit = defineEmits(['submit', 'cancel'])
+    const form = reactive({
+      question: '',
+      options: ['', '', '', ''],
+      correctAnswer: undefined,
+      category: '',
+      difficulty: '',
+      explanation: ''
+    })
 
-const questionsStore = useQuestionsStore()
+    const errors = reactive({})
 
-const form = ref({
-  question: '',
-  category: '',
-  difficulty: '',
-  points: 10,
-  options: ['', ''],
-  correctAnswer: null
-})
+    const categories = QUIZ_CATEGORIES
+    const editingQuestion = !!props.question
 
-const errors = ref({})
+    const initializeForm = () => {
+      if (props.question) {
+        form.question = props.question.question
+        form.options = [...props.question.options]
+        form.correctAnswer = props.question.correctAnswer
+        form.category = props.question.category
+        form.difficulty = props.question.difficulty
+        form.explanation = props.question.explanation || ''
+      }
+    }
 
-const isEditing = computed(() => !!props.question)
+    const addOption = () => {
+      if (form.options.length < 6) {
+        form.options.push('')
+      }
+    }
 
-const isFormValid = computed(() => {
-  return form.value.question &&
-         form.value.category &&
-         form.value.difficulty &&
-         form.value.points > 0 &&
-         form.value.options.length >= 2 &&
-         form.value.options.every(opt => opt.trim()) &&
-         form.value.correctAnswer !== null
-})
+    const removeOption = (index) => {
+      if (form.options.length > 2) {
+        form.options.splice(index, 1)
+        
+        // Adjust correct answer if needed
+        if (form.correctAnswer === index) {
+          form.correctAnswer = undefined
+        } else if (form.correctAnswer > index) {
+          form.correctAnswer--
+        }
+      }
+    }
 
-const addOption = () => {
-  if (form.value.options.length < 6) {
-    form.value.options.push('')
-  }
-}
+    const validateForm = () => {
+      const validation = validateQuestion(form)
+      Object.assign(errors, validation.errors)
+      return validation.isValid
+    }
 
-const removeOption = (index) => {
-  if (form.value.options.length > 2) {
-    form.value.options.splice(index, 1)
-    
-    if (form.value.correctAnswer === index) {
-      form.value.correctAnswer = null
-    } else if (form.value.correctAnswer > index) {
-      form.value.correctAnswer--
+    const handleSubmit = async () => {
+      if (!validateForm()) return
+
+      try {
+        if (editingQuestion) {
+          await questionStore.updateQuestion(props.question.id, form)
+        } else {
+          await questionStore.createQuestion(form)
+        }
+        
+        emit('saved')
+      } catch (error) {
+        console.error('Error saving question:', error)
+      }
+    }
+
+    onMounted(() => {
+      initializeForm()
+    })
+
+    return {
+      form,
+      errors,
+      categories,
+      editingQuestion,
+      questionStore,
+      addOption,
+      removeOption,
+      handleSubmit
     }
   }
 }
-
-const validateForm = () => {
-  errors.value = {}
-
-  if (!form.value.question.trim()) {
-    errors.value.question = 'Вопрос обязателен'
-  }
-  if (!form.value.category) {
-    errors.value.category = 'Категория обязательна'
-  }
-  if (!form.value.difficulty) {
-    errors.value.difficulty = 'Сложность обязательна'
-  }
-  if (!form.value.points || form.value.points < 1) {
-    errors.value.points = 'Баллы должны быть больше 0'
-  }
-  if (form.value.correctAnswer === null) {
-    errors.value.correctAnswer = 'Выберите правильный ответ'
-  }
-
-  return Object.keys(errors.value).length === 0
-}
-
-const handleSubmit = () => {
-  if (!validateForm()) return
-
-  if (isEditing.value) {
-    const index = questionsStore.questions.findIndex(q => q.id === props.question.id)
-    if (index !== -1) {
-      questionsStore.questions[index] = { ...props.question, ...form.value }
-    }
-  } else {
-    const newQuestion = {
-      id: Date.now(),
-      ...form.value
-    }
-    questionsStore.questions.push(newQuestion)
-  }
-
-  emit('submit')
-}
-
-watch(() => props.question, (newQuestion) => {
-  if (newQuestion) {
-    form.value = { ...newQuestion }
-  }
-}, { immediate: true })
 </script>
 
 <style scoped>
 .question-form {
-  background: var(--bg-secondary);
-  padding: 2rem;
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow-lg);
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-.question-form__title {
-  margin-bottom: 2rem;
-  color: var(--text-primary);
-  text-align: center;
-}
-
-.question-form__form {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: var(--space-6);
 }
 
-.question-form__row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
+.form-section {
+  padding: var(--space-4);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  background: var(--gray-50);
 }
 
-.question-form__field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.question-form__label {
+.form-section h3 {
+  font-size: var(--text-lg);
   font-weight: 600;
-  color: var(--text-primary);
-  font-size: 0.875rem;
+  color: var(--gray-900);
+  margin-bottom: var(--space-4);
 }
 
-.question-form__textarea,
-.question-form__select,
-.question-form__input {
-  padding: 0.75rem 1rem;
-  border: 2px solid #e2e8f0;
-  border-radius: var(--border-radius);
-  font-size: 1rem;
+.form-group {
+  margin-bottom: var(--space-4);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.form-label {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-weight: 500;
+  color: var(--gray-700);
+}
+
+.form-input,
+.form-textarea,
+.form-select {
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius);
+  font-size: var(--text-base);
   transition: var(--transition);
-  background-color: var(--bg-primary);
   font-family: inherit;
 }
 
-.question-form__textarea:focus,
-.question-form__select:focus,
-.question-form__input:focus {
+.form-input:focus,
+.form-textarea:focus,
+.form-select:focus {
   outline: none;
-  border-color: var(--primary-color);
-  background-color: var(--bg-secondary);
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.question-form__textarea--error,
-.question-form__select--error,
-.question-form__input--error {
-  border-color: var(--danger-color);
+.form-input.error,
+.form-textarea.error,
+.form-select.error {
+  border-color: var(--error-500);
 }
 
-.question-form__error {
-  color: var(--danger-color);
-  font-size: 0.875rem;
-  font-weight: 500;
+.form-textarea {
+  resize: vertical;
+  min-height: 80px;
 }
 
-.question-form__options {
-  border: 2px solid #e2e8f0;
-  border-radius: var(--border-radius);
-  padding: 1.5rem;
-  background-color: var(--bg-primary);
+.error-message {
+  color: var(--error-500);
+  font-size: var(--text-sm);
+  margin-top: var(--space-1);
 }
 
-.question-form__options-title {
-  margin: 0 0 1rem 0;
-  color: var(--text-primary);
-  font-size: 1.125rem;
+.options-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
-.question-form__option {
-  margin-bottom: 1rem;
+.option-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
-.question-form__option-content {
+.option-input-group {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
-.question-form__option-letter {
-  background-color: var(--primary-color);
-  color: white;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
+.option-marker {
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--gray-300);
+  border-radius: var(--radius);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
+  color: var(--gray-700);
   flex-shrink: 0;
 }
 
-.question-form__option-input {
-  flex: 1;
-  padding: 0.75rem 1rem;
-  border: 2px solid #e2e8f0;
-  border-radius: var(--border-radius);
-  font-size: 1rem;
+.remove-option-btn {
+  background: var(--error-500);
+  color: white;
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-lg);
   transition: var(--transition);
-  background-color: var(--bg-secondary);
+  flex-shrink: 0;
 }
 
-.question-form__option-input:focus {
-  outline: none;
-  border-color: var(--primary-color);
+.remove-option-btn:hover:not(:disabled) {
+  background: var(--error-600);
 }
 
-.question-form__add-option {
-  margin-top: 0.5rem;
+.remove-option-btn:disabled {
+  background: var(--gray-400);
+  cursor: not-allowed;
 }
 
-.question-form__correct-answers {
+.correct-answer-selector {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
-.question-form__correct-answer {
+.answer-option {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 1rem;
-  border: 2px solid #e2e8f0;
-  border-radius: var(--border-radius);
-  background-color: var(--bg-primary);
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 2px solid var(--gray-200);
+  border-radius: var(--radius);
   cursor: pointer;
   transition: var(--transition);
+  background: white;
 }
 
-.question-form__correct-answer:hover {
-  border-color: var(--primary-color);
+.answer-option:hover {
+  border-color: var(--primary-300);
 }
 
-.question-form__correct-answer--selected {
-  border-color: var(--success-color);
-  background-color: rgba(76, 201, 240, 0.1);
+.answer-option.selected {
+  border-color: var(--primary-500);
+  background: var(--primary-50);
 }
 
-.question-form__correct-letter {
-  background-color: var(--primary-color);
+.answer-option.selected .option-marker {
+  background: var(--primary-500);
+  border-color: var(--primary-500);
   color: white;
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 0.75rem;
-  flex-shrink: 0;
 }
 
-.question-form__correct-answer--selected .question-form__correct-letter {
-  background-color: var(--success-color);
-}
-
-.question-form__correct-text {
+.option-text {
+  font-weight: 500;
+  color: var(--gray-700);
   flex: 1;
-  font-size: 0.875rem;
 }
 
-.question-form__correct-check {
-  color: var(--success-color);
+.answer-option.selected .option-text {
+  color: var(--primary-700);
   font-weight: 600;
-  font-size: 1.125rem;
 }
 
-.question-form__actions {
+.form-actions {
   display: flex;
-  gap: 1rem;
   justify-content: flex-end;
-  padding-top: 1rem;
-  border-top: 1px solid #e2e8f0;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--gray-200);
 }
 
 @media (max-width: 768px) {
-  .question-form {
-    padding: 1.5rem;
-    margin: 1rem;
-  }
-
-  .question-form__row {
+  .form-row {
     grid-template-columns: 1fr;
   }
-
-  .question-form__correct-answers {
+  
+  .correct-answer-selector {
     grid-template-columns: 1fr;
   }
-
-  .question-form__actions {
+  
+  .form-actions {
     flex-direction: column;
   }
 }

@@ -1,186 +1,441 @@
 <template>
   <div class="admin-view">
     <div class="container">
-      <div class="admin-view__header">
-        <h1 class="admin-view__title">Панель администратора</h1>
-        <p class="admin-view__subtitle">
-          Управление вопросами и просмотр статистики
-        </p>
+      <div class="page-header">
+        <h1 class="page-title">Admin Dashboard</h1>
+        <p class="page-subtitle">Manage quizzes, questions, and track platform analytics</p>
       </div>
 
-      <div class="admin-view__tabs">
-        <button
-          v-for="tab in tabs"
-          :key="tab.id"
-          :class="[
-            'admin-view__tab',
-            { 'admin-view__tab--active': activeTab === tab.id }
-          ]"
-          @click="activeTab = tab.id"
-        >
-          <span class="admin-view__tab-icon">{{ tab.icon }}</span>
-          <span class="admin-view__tab-text">{{ tab.name }}</span>
-        </button>
+      <!-- Admin Tabs -->
+      <div class="admin-tabs">
+        <div class="tabs-header">
+          <button
+            v-for="tab in tabs"
+            :key="tab.id"
+            @click="activeTab = tab.id"
+            :class="['tab-button', { active: activeTab === tab.id }]"
+          >
+            {{ tab.label }}
+          </button>
+        </div>
+
+        <div class="tab-content">
+          <!-- Questions Management -->
+          <div v-if="activeTab === 'questions'" class="tab-panel">
+            <div class="panel-header">
+              <h2>Question Bank</h2>
+              <BaseButton @click="showQuestionModal = true" variant="primary">
+                Add New Question
+              </BaseButton>
+            </div>
+            <QuestionList @edit-question="handleEditQuestion" />
+          </div>
+
+          <!-- Quizzes Management -->
+          <div v-else-if="activeTab === 'quizzes'" class="tab-panel">
+            <div class="panel-header">
+              <h2>Quiz Management</h2>
+              <BaseButton @click="showQuizModal = true" variant="primary">
+                Create New Quiz
+              </BaseButton>
+            </div>
+            <QuizManager @quiz-created="handleQuizCreated" />
+          </div>
+
+          <!-- Analytics -->
+          <div v-else-if="activeTab === 'analytics'" class="tab-panel">
+            <h2>Platform Analytics</h2>
+            <div class="analytics-grid">
+              <BaseCard class="analytics-card">
+                <div class="analytics-content">
+                  <div class="analytics-value">{{ totalQuizzes }}</div>
+                  <div class="analytics-label">Total Quizzes</div>
+                </div>
+              </BaseCard>
+              <BaseCard class="analytics-card">
+                <div class="analytics-content">
+                  <div class="analytics-value">{{ totalQuestions }}</div>
+                  <div class="analytics-label">Questions in Bank</div>
+                </div>
+              </BaseCard>
+              <BaseCard class="analytics-card">
+                <div class="analytics-content">
+                  <div class="analytics-value">{{ totalResults }}</div>
+                  <div class="analytics-label">Quiz Attempts</div>
+                </div>
+              </BaseCard>
+              <BaseCard class="analytics-card">
+                <div class="analytics-content">
+                  <div class="analytics-value">{{ averagePlatformScore }}%</div>
+                  <div class="analytics-label">Average Score</div>
+                </div>
+              </BaseCard>
+            </div>
+
+            <!-- Recent Results -->
+            <div class="recent-results">
+              <h3>Recent Quiz Attempts</h3>
+              <BaseCard>
+                <div class="results-table">
+                  <div class="table-header">
+                    <div class="table-cell">Student</div>
+                    <div class="table-cell">Quiz</div>
+                    <div class="table-cell">Score</div>
+                    <div class="table-cell">Date</div>
+                  </div>
+                  <div
+                    v-for="result in recentResults"
+                    :key="result.id"
+                    class="table-row"
+                  >
+                    <div class="table-cell">{{ result.userName }}</div>
+                    <div class="table-cell">{{ result.quizTitle }}</div>
+                    <div class="table-cell">
+                      <span class="score-badge" :class="getScoreClass(result.score)">
+                        {{ result.score }}%
+                      </span>
+                    </div>
+                    <div class="table-cell">{{ formatDate(result.submittedAt) }}</div>
+                  </div>
+                </div>
+              </BaseCard>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="admin-view__content">
-        <div v-if="activeTab === 'questions'" class="admin-view__tab-content">
-          <QuestionList
-            @add-question="showQuestionForm(null)"
-            @edit-question="showQuestionForm($event)"
-          />
-        </div>
+      <!-- Question Modal -->
+      <BaseModal
+        v-model:isOpen="showQuestionModal"
+        :title="editingQuestion ? 'Edit Question' : 'Add New Question'"
+        size="large"
+      >
+        <QuestionForm
+          :question="editingQuestion"
+          @saved="handleQuestionSaved"
+          @cancel="showQuestionModal = false"
+        />
+      </BaseModal>
 
-        <div v-if="activeTab === 'question-form'" class="admin-view__tab-content">
-          <QuestionForm
-            :question="selectedQuestion"
-            @submit="handleQuestionSubmit"
-            @cancel="activeTab = 'questions'"
-          />
-        </div>
-
-        <div v-if="activeTab === 'stats'" class="admin-view__tab-content">
-          <QuizStats />
-        </div>
-      </div>
+      <!-- Quiz Modal -->
+      <BaseModal
+        v-model:isOpen="showQuizModal"
+        title="Create New Quiz"
+        size="xlarge"
+      >
+        <QuizManager @quiz-created="handleQuizCreated" />
+      </BaseModal>
     </div>
   </div>
 </template>
 
-<script setup>
-import { ref } from 'vue'
-import QuestionList from '@/components/admin/QuestionList.vue'
-import QuestionForm from '@/components/admin/QuestionForm.vue'
-import QuizStats from '@/components/admin/QuizStats.vue'
+<script>
+import { ref, computed, onMounted } from 'vue'
+import { useQuizStore } from '../stores/quizzes'
+import { useQuestionStore } from '../stores/questions'
+import { useResultsStore } from '../stores/results'
+import QuestionList from '../components/admin/QuestionList.vue'
+import QuestionForm from '../components/admin/QuestionForm.vue'
+import QuizManager from '../components/admin/QuizManager.vue'
+import BaseCard from '../components/common/BaseCard.vue'
+import BaseButton from '../components/common/BaseButton.vue'
+import BaseModal from '../components/common/BaseModal.vue'
 
-const activeTab = ref('questions')
-const selectedQuestion = ref(null)
+export default {
+  name: 'AdminView',
+  components: {
+    QuestionList,
+    QuestionForm,
+    QuizManager,
+    BaseCard,
+    BaseButton,
+    BaseModal
+  },
+  setup() {
+    const quizStore = useQuizStore()
+    const questionStore = useQuestionStore()
+    const resultsStore = useResultsStore()
 
-const tabs = [
-  { id: 'questions', name: 'Вопросы', icon: '❓' },
-  { id: 'stats', name: 'Статистика', icon: '📊' }
-]
+    const activeTab = ref('questions')
+    const showQuestionModal = ref(false)
+    const showQuizModal = ref(false)
+    const editingQuestion = ref(null)
 
-const showQuestionForm = (question) => {
-  selectedQuestion.value = question
-  activeTab.value = 'question-form'
-}
+    const tabs = [
+      { id: 'questions', label: 'Questions' },
+      { id: 'quizzes', label: 'Quizzes' },
+      { id: 'analytics', label: 'Analytics' }
+    ]
 
-const handleQuestionSubmit = () => {
-  activeTab.value = 'questions'
-  selectedQuestion.value = null
+    const totalQuizzes = computed(() => quizStore.quizzes.length)
+    const totalQuestions = computed(() => questionStore.questions.length)
+    const totalResults = computed(() => resultsStore.results.length)
+
+    const averagePlatformScore = computed(() => {
+      if (resultsStore.results.length === 0) return 0
+      const total = resultsStore.results.reduce((sum, result) => sum + result.score, 0)
+      return Math.round(total / resultsStore.results.length)
+    })
+
+    const recentResults = computed(() => {
+      return resultsStore.results.slice(0, 10).sort((a, b) => 
+        new Date(b.submittedAt) - new Date(a.submittedAt)
+      )
+    })
+
+    const formatDate = (dateString) => {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    }
+
+    const getScoreClass = (score) => {
+      if (score >= 80) return 'excellent'
+      if (score >= 60) return 'good'
+      if (score >= 40) return 'average'
+      return 'poor'
+    }
+
+    const handleEditQuestion = (question) => {
+      editingQuestion.value = question
+      showQuestionModal.value = true
+    }
+
+    const handleQuestionSaved = () => {
+      showQuestionModal.value = false
+      editingQuestion.value = null
+      questionStore.loadQuestions()
+    }
+
+    const handleQuizCreated = () => {
+      showQuizModal.value = false
+      quizStore.loadQuizzes()
+    }
+
+    onMounted(async () => {
+      await Promise.all([
+        quizStore.loadQuizzes(),
+        questionStore.loadQuestions(),
+        resultsStore.loadResults()
+      ])
+    })
+
+    return {
+      activeTab,
+      tabs,
+      showQuestionModal,
+      showQuizModal,
+      editingQuestion,
+      totalQuizzes,
+      totalQuestions,
+      totalResults,
+      averagePlatformScore,
+      recentResults,
+      formatDate,
+      getScoreClass,
+      handleEditQuestion,
+      handleQuestionSaved,
+      handleQuizCreated
+    }
+  }
 }
 </script>
 
 <style scoped>
 .admin-view {
-  padding: 2rem 0;
-  min-height: calc(100vh - 200px);
+  padding-bottom: var(--space-8);
 }
 
-.admin-view__header {
+.page-header {
   text-align: center;
-  margin-bottom: 3rem;
+  margin-bottom: var(--space-8);
 }
 
-.admin-view__title {
-  margin: 0 0 1rem 0;
-  color: var(--text-primary);
-  font-size: 2.5rem;
+.page-title {
+  font-size: var(--text-3xl);
   font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: var(--space-2);
 }
 
-.admin-view__subtitle {
+.page-subtitle {
+  font-size: var(--text-lg);
+  color: var(--gray-600);
   margin: 0;
-  color: var(--text-secondary);
-  font-size: 1.25rem;
 }
 
-.admin-view__tabs {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 2rem;
-  border-bottom: 2px solid var(--bg-primary);
-  padding-bottom: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.admin-view__tab {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 1rem 1.5rem;
-  background: none;
-  border: none;
-  border-radius: var(--border-radius) var(--border-radius) 0 0;
-  cursor: pointer;
-  transition: var(--transition);
-  font-weight: 600;
-  color: var(--text-secondary);
-  border-bottom: 3px solid transparent;
-}
-
-.admin-view__tab:hover {
-  color: var(--primary-color);
-  background-color: var(--bg-primary);
-}
-
-.admin-view__tab--active {
-  color: var(--primary-color);
-  border-bottom-color: var(--primary-color);
-  background-color: var(--bg-primary);
-}
-
-.admin-view__tab-icon {
-  font-size: 1.25rem;
-}
-
-.admin-view__tab-text {
-  font-size: 1rem;
-}
-
-.admin-view__content {
-  background: var(--bg-secondary);
-  border-radius: var(--border-radius-lg);
+.admin-tabs {
+  background: white;
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
   overflow: hidden;
-  min-height: 500px;
 }
 
-.admin-view__tab-content {
-  padding: 0;
+.tabs-header {
+  display: flex;
+  background: var(--gray-50);
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.tab-button {
+  padding: var(--space-4) var(--space-6);
+  background: none;
+  border: none;
+  font-weight: 500;
+  color: var(--gray-600);
+  cursor: pointer;
+  transition: var(--transition);
+  border-bottom: 2px solid transparent;
+}
+
+.tab-button:hover {
+  color: var(--primary-600);
+  background: var(--gray-100);
+}
+
+.tab-button.active {
+  color: var(--primary-600);
+  border-bottom-color: var(--primary-600);
+  background: white;
+}
+
+.tab-content {
+  padding: var(--space-6);
+}
+
+.tab-panel h2 {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--gray-900);
+  margin-bottom: var(--space-6);
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-6);
+}
+
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-6);
+  margin-bottom: var(--space-8);
+}
+
+.analytics-card {
+  text-align: center;
+}
+
+.analytics-content {
+  padding: var(--space-6);
+}
+
+.analytics-value {
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  color: var(--primary-600);
+  margin-bottom: var(--space-2);
+}
+
+.analytics-label {
+  color: var(--gray-600);
+  font-weight: 500;
+}
+
+.recent-results h3 {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--gray-900);
+  margin-bottom: var(--space-4);
+}
+
+.results-table {
+  width: 100%;
+}
+
+.table-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--gray-50);
+  border-bottom: 1px solid var(--gray-200);
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.table-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--gray-200);
+  transition: var(--transition);
+}
+
+.table-row:hover {
+  background: var(--gray-50);
+}
+
+.table-row:last-child {
+  border-bottom: none;
+}
+
+.table-cell {
+  display: flex;
+  align-items: center;
+}
+
+.score-badge {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius);
+  font-weight: 600;
+  color: white;
+  font-size: var(--text-sm);
+  min-width: 50px;
+  text-align: center;
+}
+
+.score-badge.excellent {
+  background: var(--success-500);
+}
+
+.score-badge.good {
+  background: var(--primary-500);
+}
+
+.score-badge.average {
+  background: var(--warning-500);
+}
+
+.score-badge.poor {
+  background: var(--error-500);
 }
 
 @media (max-width: 768px) {
-  .admin-view {
-    padding: 1rem 0;
-  }
-
-  .admin-view__header {
-    margin-bottom: 2rem;
-  }
-
-  .admin-view__title {
-    font-size: 2rem;
-  }
-
-  .admin-view__subtitle {
-    font-size: 1.125rem;
-  }
-
-  .admin-view__tabs {
+  .tabs-header {
     flex-direction: column;
-    gap: 0.25rem;
   }
-
-  .admin-view__tab {
-    border-radius: var(--border-radius);
-    border-bottom: 2px solid transparent;
-    justify-content: center;
+  
+  .panel-header {
+    flex-direction: column;
+    gap: var(--space-4);
+    align-items: flex-start;
   }
-
-  .admin-view__tab--active {
-    border-bottom-color: var(--primary-color);
+  
+  .analytics-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .table-header,
+  .table-row {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
   }
 }
 </style>

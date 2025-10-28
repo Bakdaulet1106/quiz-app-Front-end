@@ -1,59 +1,45 @@
 <template>
-  <button
-    :class="[
-      'base-button',
-      `base-button--${variant}`,
-      `base-button--${size}`,
-      {
-        'base-button--disabled': disabled,
-        'base-button--loading': loading,
-        'base-button--full-width': fullWidth
-      }
-    ]"
-    :disabled="disabled || loading"
-    @click="handleClick"
+  <button 
+    :class="['base-button', variant, size, { loading: isLoading, disabled }]"
+    :disabled="disabled || isLoading"
+    @click="$emit('click', $event)"
   >
-    <LoadingSpinner v-if="loading" class="base-button__spinner" />
-    <span class="base-button__content">
+    <LoadingSpinner v-if="isLoading" class="button-spinner" />
+    <span class="button-content">
       <slot />
     </span>
   </button>
 </template>
 
-<script setup>
+<script>
 import LoadingSpinner from './LoadingSpinner.vue'
 
-const props = defineProps({
-  variant: {
-    type: String,
-    default: 'primary',
-    validator: (value) => ['primary', 'secondary', 'success', 'danger', 'warning'].includes(value)
+export default {
+  name: 'BaseButton',
+  components: {
+    LoadingSpinner
   },
-  size: {
-    type: String,
-    default: 'medium',
-    validator: (value) => ['small', 'medium', 'large'].includes(value)
+  props: {
+    variant: {
+      type: String,
+      default: 'primary',
+      validator: (value) => ['primary', 'secondary', 'outline', 'danger'].includes(value)
+    },
+    size: {
+      type: String,
+      default: 'medium',
+      validator: (value) => ['small', 'medium', 'large'].includes(value)
+    },
+    isLoading: {
+      type: Boolean,
+      default: false
+    },
+    disabled: {
+      type: Boolean,
+      default: false
+    }
   },
-  disabled: {
-    type: Boolean,
-    default: false
-  },
-  loading: {
-    type: Boolean,
-    default: false
-  },
-  fullWidth: {
-    type: Boolean,
-    default: false
-  }
-})
-
-const emit = defineEmits(['click'])
-
-const handleClick = (event) => {
-  if (!props.disabled && !props.loading) {
-    emit('click', event)
-  }
+  emits: ['click']
 }
 </script>
 
@@ -62,76 +48,93 @@ const handleClick = (event) => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
   border: none;
-  border-radius: var(--border-radius);
-  font-weight: 600;
+  border-radius: var(--radius);
+  font-weight: 500;
   cursor: pointer;
   transition: var(--transition);
+  text-decoration: none;
   font-family: inherit;
 }
 
 .base-button:focus {
-  outline: 2px solid var(--primary-color);
+  outline: 2px solid var(--primary-500);
   outline-offset: 2px;
 }
 
-.base-button--disabled {
+.base-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-.base-button--full-width {
-  width: 100%;
+/* Variants */
+.primary {
+  background: var(--primary-500);
+  color: white;
 }
 
-.base-button--primary {
-  background-color: var(--primary-color);
-  color: var(--text-light);
+.primary:hover:not(:disabled) {
+  background: var(--primary-600);
 }
 
-.base-button--primary:hover:not(.base-button--disabled) {
-  background-color: var(--primary-dark);
+.secondary {
+  background: var(--gray-100);
+  color: var(--gray-700);
 }
 
-.base-button--secondary {
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
-  border: 2px solid var(--primary-color);
+.secondary:hover:not(:disabled) {
+  background: var(--gray-200);
 }
 
-.base-button--secondary:hover:not(.base-button--disabled) {
-  background-color: var(--primary-color);
-  color: var(--text-light);
+.outline {
+  background: transparent;
+  color: var(--primary-500);
+  border: 1px solid var(--primary-500);
 }
 
-.base-button--small {
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
+.outline:hover:not(:disabled) {
+  background: var(--primary-50);
 }
 
-.base-button--medium {
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
+.danger {
+  background: var(--error-500);
+  color: white;
 }
 
-.base-button--large {
-  padding: 1rem 2rem;
-  font-size: 1.125rem;
+.danger:hover:not(:disabled) {
+  background: var(--error-600);
 }
 
-.base-button--loading {
-  cursor: wait;
+/* Sizes */
+.small {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
 }
 
-.base-button__spinner {
-  width: 1rem;
-  height: 1rem;
+.medium {
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-base);
 }
 
-.base-button__content {
+.large {
+  padding: var(--space-4) var(--space-6);
+  font-size: var(--text-lg);
+}
+
+/* Loading state */
+.loading {
+  pointer-events: none;
+}
+
+.button-spinner {
+  width: 16px;
+  height: 16px;
+}
+
+.button-content {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 </style>

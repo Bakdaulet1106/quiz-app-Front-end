@@ -1,23 +1,26 @@
 import js from '@eslint/js'
+import globals from 'globals'
 import vue from 'eslint-plugin-vue'
 
 export default [
-  js.configs.recommended,
-  ...vue.configs['flat/recommended'],
   {
-    files: ['**/*.vue'],
+    files: ['**/*.{js,vue}'],
     languageOptions: {
-      parserOptions: {
-        parser: require('@babel/eslint-parser')
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      globals: {
+        ...globals.browser,
+        ...globals.node
       }
-    }
-  },
-  {
+    },
+    plugins: {
+      vue
+    },
     rules: {
-      'vue/multi-word-component-names': 'off',
-      'vue/no-unused-vars': 'error',
-      'no-unused-vars': 'error',
-      'prefer-const': 'error'
+      ...js.configs.recommended.rules,
+      ...vue.configs.recommended.rules,
+      'no-unused-vars': 'warn',
+      'no-console': 'warn'
     }
   }
 ]

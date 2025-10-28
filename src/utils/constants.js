@@ -1,21 +1,33 @@
-export const CATEGORIES = [
-  'Vue.js',
-  'JavaScript',
-  'HTML/CSS',
-  'React',
-  'Angular',
-  'Node.js',
-  'General Programming'
+export const USER_ROLES = {
+  ADMIN: 'admin',
+  STUDENT: 'student'
+}
+
+export const QUIZ_DIFFICULTY = {
+  EASY: 'easy',
+  MEDIUM: 'medium',
+  HARD: 'hard'
+}
+
+export const QUIZ_CATEGORIES = [
+  'General',
+  'Programming',
+  'Mathematics',
+  'Science',
+  'History',
+  'Geography',
+  'Languages'
 ]
 
-export const DIFFICULTY_LEVELS = [
-  { value: 'easy', label: 'Легкий', color: '#4ade80' },
-  { value: 'medium', label: 'Средний', color: '#f59e0b' },
-  { value: 'hard', label: 'Сложный', color: '#ef4444' }
-]
+export const STORAGE_KEYS = {
+  USER: 'quiz_app_user',
+  QUIZ_PROGRESS: 'quiz_app_progress',
+  OFFLINE_DATA: 'quiz_app_offline'
+}
 
-export const QUIZ_SETTINGS = {
-  TIME_LIMIT: 300,
-  QUESTIONS_PER_QUIZ: 5,
-  PASSING_SCORE: 60
+export const API_ENDPOINTS = {
+  LOGIN: '/api/users',
+  QUESTIONS: '/api/questions',
+  QUIZZES: '/api/quizzes',
+  RESULTS: '/api/results'
 }
